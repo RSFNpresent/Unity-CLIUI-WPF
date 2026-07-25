@@ -34,6 +34,7 @@ public partial class MainWindow : Window
 
     private readonly UnityCliService _cli = new();
     private readonly DirectUnityService _direct = new();
+    private readonly bool _requiresFirstRunSetup;
     private readonly Queue<string> _recentOutput = new();
     private readonly Dictionary<string, AvailableModulesCacheEntry> _availableModulesCache =
         new(StringComparer.OrdinalIgnoreCase);
@@ -47,6 +48,7 @@ public partial class MainWindow : Window
     private bool _projectSortDescending = true;
     private bool _isInitializingLanguage;
     private bool _isInitializingManagerSettings;
+    private bool _firstRunSetupCompleted;
     private ManagementMode _managementMode = ManagementMode.Auto;
     private string _currentPage = "Dashboard";
 
@@ -61,6 +63,8 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
+        _requiresFirstRunSetup = !File.Exists(GetManagerSettingsFilePath());
+        _firstRunSetupCompleted = !_requiresFirstRunSetup;
         LocalizationService.Initialize(LoadManagerLanguage());
         InitializeComponent();
         DataContext = this;
@@ -87,7 +91,10 @@ public partial class MainWindow : Window
             LocalizationService.LanguageChanged -= LocalizationService_LanguageChanged;
             SaveAvailableModulesCache();
             SaveEditorInstallationsCache();
-            SaveManagerSettings();
+            if (_firstRunSetupCompleted)
+            {
+                SaveManagerSettings();
+            }
         };
         SourceInitialized += (_, _) =>
         {
@@ -140,6 +147,12 @@ public partial class MainWindow : Window
 
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
+        if (_requiresFirstRunSetup && !CompleteFirstRunSetup())
+        {
+            Close();
+            return;
+        }
+
         DetectCli();
         UpdateManagementModeUi();
         if (UseDirectBackend)
@@ -155,6 +168,33 @@ public partial class MainWindow : Window
         {
             ShowPage("Settings");
         }
+    }
+
+    private bool CompleteFirstRunSetup()
+    {
+        var dialog = new FirstRunDialog(LocalizationService.CurrentLanguage)
+        {
+            Owner = this
+        };
+        if (dialog.ShowDialog() != true || dialog.SelectedManagementMode is null)
+        {
+            return false;
+        }
+
+        LocalizationService.SetLanguage(dialog.SelectedLanguage);
+        _isInitializingLanguage = true;
+        LanguageCombo.SelectedValue = dialog.SelectedLanguage;
+        _isInitializingLanguage = false;
+
+        _isInitializingManagerSettings = true;
+        _managementMode = dialog.SelectedManagementMode.Value;
+        ManagementModeCombo.SelectedValue = _managementMode.ToString();
+        _isInitializingManagerSettings = false;
+
+        _firstRunSetupCompleted = true;
+        UpdateManagementModeUi();
+        SaveManagerSettings();
+        return true;
     }
 
     private void DetectCli()

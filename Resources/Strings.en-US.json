@@ -388,5 +388,14 @@
   "settings.editorInstallRoot": "Editor install root",
   "dialog.selectEditorInstallRoot": "Select the Unity editor install root",
   "model.direct": "Direct",
-  "editor.patchAvailable": "Unity {0} is available in this release line."
+  "editor.patchAvailable": "Unity {0} is available in this release line.",
+  "firstRun.title": "First-time setup",
+  "firstRun.heading": "Welcome to Unity CLIUI",
+  "firstRun.description": "Choose the display language and editor management method.",
+  "firstRun.language": "Display language",
+  "firstRun.managementMode": "Editor management method",
+  "firstRun.cliHint": "Manage editors with an installed official Unity CLI.",
+  "firstRun.directHint": "Download and install editors from Unity's official CDN without Unity CLI.",
+  "firstRun.exit": "Exit",
+  "firstRun.continue": "Continue"
 }

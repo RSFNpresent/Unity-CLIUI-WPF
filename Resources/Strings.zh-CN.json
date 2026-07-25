@@ -388,5 +388,14 @@
   "settings.editorInstallRoot": "\u7F16\u8F91\u5668\u5B89\u88C5\u6839\u76EE\u5F55",
   "dialog.selectEditorInstallRoot": "\u9009\u62E9 Unity \u7F16\u8F91\u5668\u5B89\u88C5\u6839\u76EE\u5F55",
   "model.direct": "\u76F4\u8FDE",
-  "editor.patchAvailable": "\u8BE5\u53D1\u5E03\u7EBF\u53EF\u5347\u7EA7\u5230 Unity {0}\u3002"
+  "editor.patchAvailable": "\u8BE5\u53D1\u5E03\u7EBF\u53EF\u5347\u7EA7\u5230 Unity {0}\u3002",
+  "firstRun.title": "\u9996\u6B21\u8BBE\u7F6E",
+  "firstRun.heading": "\u6B22\u8FCE\u4F7F\u7528 Unity CLIUI",
+  "firstRun.description": "\u8BF7\u9009\u62E9\u754C\u9762\u8BED\u8A00\u548C\u7F16\u8F91\u5668\u7BA1\u7406\u65B9\u5F0F\u3002",
+  "firstRun.language": "\u754C\u9762\u8BED\u8A00",
+  "firstRun.managementMode": "\u7F16\u8F91\u5668\u7BA1\u7406\u65B9\u5F0F",
+  "firstRun.cliHint": "\u4F7F\u7528\u5DF2\u5B89\u88C5\u7684\u5B98\u65B9 Unity CLI \u7BA1\u7406\u7F16\u8F91\u5668\u3002",
+  "firstRun.directHint": "\u4E0D\u4F9D\u8D56 CLI\uFF0C\u4ECE Unity \u5B98\u65B9 CDN \u4E0B\u8F7D\u5E76\u5B89\u88C5\u7F16\u8F91\u5668\u3002",
+  "firstRun.exit": "\u9000\u51FA",
+  "firstRun.continue": "\u7EE7\u7EED"
 }

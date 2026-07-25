@@ -1,9 +1,11 @@
 using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using unity_cli_ui;
 using unity_cli_ui.Models;
 using unity_cli_ui.Services;
 
@@ -15,6 +17,7 @@ internal static class Program
     [
         ("Release API parsing", TestReleaseApiParsingAsync),
         ("Only No CLI mode enables direct downloads", TestBackendModePolicyAsync),
+        ("First-run language and management choices", TestFirstRunChoicesAsync),
         ("Release API pagination limit", TestReleaseApiPaginationAsync),
         ("Integrity encodings", TestIntegrityEncodingsAsync),
         ("Dependency DAG and version guard", TestDependencyPlannerAsync),
@@ -104,6 +107,44 @@ internal static class Program
         True(!BackendModePolicy.UsesDirectDownloads(ManagementMode.Auto));
         True(BackendModePolicy.UsesDirectDownloads(ManagementMode.Direct));
         True(!BackendModePolicy.UsesDirectDownloads(ManagementMode.UnityCli));
+        return Task.CompletedTask;
+    }
+
+    private static Task TestFirstRunChoicesAsync()
+    {
+        Exception? failure = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                LocalizationService.Initialize(LocalizationService.Chinese);
+                var dialog = new FirstRunDialog(LocalizationService.Chinese);
+                Equal(LocalizationService.Chinese, dialog.SelectedLanguage);
+                Equal<ManagementMode?>(null, dialog.SelectedManagementMode);
+
+                SetNamedBooleanProperty(dialog, "EnglishLanguageRadio", "IsChecked", true);
+                Equal(LocalizationService.English, dialog.SelectedLanguage);
+
+                SetNamedBooleanProperty(dialog, "DirectModeRadio", "IsChecked", true);
+                Equal<ManagementMode?>(ManagementMode.Direct, dialog.SelectedManagementMode);
+                Equal(true, GetNamedBooleanProperty(dialog, "ContinueButton", "IsEnabled"));
+            }
+            catch (Exception exception)
+            {
+                failure = exception;
+            }
+            finally
+            {
+                LocalizationService.Initialize(LocalizationService.Chinese);
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+        if (failure is not null)
+        {
+            throw new InvalidOperationException("First-run dialog interaction failed.", failure);
+        }
         return Task.CompletedTask;
     }
 
@@ -365,6 +406,28 @@ internal static class Program
         var path = Path.Combine(Path.GetTempPath(), "UnityCliUi.DirectTests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(path);
         return path;
+    }
+
+    private static object GetNamedControl(object instance, string fieldName) =>
+        instance.GetType()
+            .GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic)
+            ?.GetValue(instance)
+        ?? throw new InvalidOperationException($"Control '{fieldName}' was not found.");
+
+    private static void SetNamedBooleanProperty(
+        object instance,
+        string fieldName,
+        string propertyName,
+        bool value)
+    {
+        var control = GetNamedControl(instance, fieldName);
+        control.GetType().GetProperty(propertyName)?.SetValue(control, value);
+    }
+
+    private static bool GetNamedBooleanProperty(object instance, string fieldName, string propertyName)
+    {
+        var control = GetNamedControl(instance, fieldName);
+        return control.GetType().GetProperty(propertyName)?.GetValue(control) as bool? == true;
     }
 
     private static void Equal<T>(T expected, T actual)
