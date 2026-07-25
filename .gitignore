@@ -1,0 +1,10 @@
+.vs/
+.tmp/
+bin/
+obj/
+
+*.suo
+*.user
+
+# Unity CLI is downloaded separately from the official Unity distribution.
+unitycli-*.exe
