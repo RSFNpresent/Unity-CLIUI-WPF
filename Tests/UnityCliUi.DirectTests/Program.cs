@@ -14,7 +14,7 @@ internal static class Program
     private static readonly List<(string Name, Func<Task> Test)> Tests =
     [
         ("Release API parsing", TestReleaseApiParsingAsync),
-        ("Direct mode requires explicit setting", TestBackendModePolicyAsync),
+        ("Only No CLI mode enables direct downloads", TestBackendModePolicyAsync),
         ("Release API pagination limit", TestReleaseApiPaginationAsync),
         ("Integrity encodings", TestIntegrityEncodingsAsync),
         ("Dependency DAG and version guard", TestDependencyPlannerAsync),

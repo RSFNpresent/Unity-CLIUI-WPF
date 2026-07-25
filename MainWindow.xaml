@@ -145,6 +145,146 @@
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
 
+        <Style x:Key="Win10SettingsComboBoxItem" TargetType="ComboBoxItem">
+            <Setter Property="Height" Value="34" />
+            <Setter Property="Padding" Value="12,0" />
+            <Setter Property="Foreground" Value="#202020" />
+            <Setter Property="Background" Value="White" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Grid x:Name="ItemSurface"
+                              Background="{TemplateBinding Background}"
+                              SnapsToDevicePixels="True">
+                            <Border x:Name="SelectionIndicator"
+                                    Width="3"
+                                    Margin="0,4"
+                                    HorizontalAlignment="Left"
+                                    Background="{StaticResource AccentBrush}"
+                                    Visibility="Collapsed" />
+                            <ContentPresenter Margin="{TemplateBinding Padding}"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              RecognizesAccessKey="True" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="ItemSurface" Property="Background" Value="#F2F2F2" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="ItemSurface" Property="Background" Value="#E5F1FB" />
+                                <Setter TargetName="SelectionIndicator" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="Win10SettingsComboBox"
+               TargetType="ComboBox"
+               BasedOn="{StaticResource {x:Type ComboBox}}">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="#8A8886" />
+            <Setter Property="Padding" Value="10,0,36,0" />
+            <Setter Property="ItemContainerStyle" Value="{StaticResource Win10SettingsComboBoxItem}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid SnapsToDevicePixels="True">
+                            <Border x:Name="Chrome"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}" />
+                            <ToggleButton x:Name="DropDownToggle"
+                                          Background="Transparent"
+                                          BorderThickness="0"
+                                          ClickMode="Press"
+                                          Focusable="False"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border Background="Transparent" />
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <ContentPresenter Margin="{TemplateBinding Padding}"
+                                              HorizontalAlignment="Left"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                              ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                              ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
+                                              IsHitTestVisible="False"
+                                              RecognizesAccessKey="True" />
+                            <Border x:Name="ArrowSurface"
+                                    Width="32"
+                                    Margin="1"
+                                    HorizontalAlignment="Right"
+                                    Background="Transparent"
+                                    IsHitTestVisible="False">
+                                <TextBlock HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           FontFamily="Segoe MDL2 Assets"
+                                           FontSize="10"
+                                           Foreground="#202020"
+                                           Text="&#xE70D;" />
+                            </Border>
+                            <Popup x:Name="PART_Popup"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   Placement="Bottom"
+                                   PopupAnimation="Fade">
+                                <Grid x:Name="DropDown"
+                                      MinWidth="{TemplateBinding ActualWidth}"
+                                      MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                      Margin="0,1,0,0"
+                                      SnapsToDevicePixels="True">
+                                    <Border x:Name="DropDownBorder"
+                                            Background="White"
+                                            BorderBrush="#8A8886"
+                                            BorderThickness="1">
+                                        <ScrollViewer Margin="0,2"
+                                                      CanContentScroll="True"
+                                                      SnapsToDevicePixels="True">
+                                            <StackPanel IsItemsHost="True"
+                                                        KeyboardNavigation.DirectionalNavigation="Contained" />
+                                        </ScrollViewer>
+                                    </Border>
+                                </Grid>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="#5A5A5A" />
+                                <Setter TargetName="ArrowSurface" Property="Background" Value="#F2F2F2" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsDropDownOpen" Value="True">
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                <Setter TargetName="ArrowSurface" Property="Background" Value="#E5E5E5" />
+                            </Trigger>
+                            <Trigger Property="HasItems" Value="False">
+                                <Setter TargetName="DropDownBorder" Property="MinHeight" Value="34" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style TargetType="CheckBox">
             <Setter Property="Foreground" Value="#566176" />
             <Setter Property="FontSize" Value="12" />
@@ -1325,13 +1465,18 @@
                         <Border Grid.Row="2" Background="White" BorderBrush="#E2E6ED" BorderThickness="1">
                             <Grid>
                                 <Grid.RowDefinitions><RowDefinition Height="48" /><RowDefinition Height="*" /></Grid.RowDefinitions>
-                                <Border BorderBrush="#E5E9F0" BorderThickness="0,0,0,1" Background="#FAFBFD" Padding="16,0">
-                                    <Grid>
+                                <Grid Background="#FAFBFD">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="{x:Static SystemParameters.VerticalScrollBarWidth}" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border BorderBrush="#E5E9F0" BorderThickness="0,0,0,1" Padding="16,0">
+                                        <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="46" />
                                             <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="128" />
-                                            <ColumnDefinition Width="152" />
+                                            <ColumnDefinition Width="140" />
+                                            <ColumnDefinition Width="140" />
                                             <ColumnDefinition Width="94" />
                                             <ColumnDefinition Width="94" />
                                             <ColumnDefinition Width="78" />
@@ -1351,11 +1496,19 @@
                                                 </StackPanel>
                                             </Button>
                                         </Border>
-                                        <Border Grid.Column="2" BorderBrush="#E3E7ED" BorderThickness="0,0,1,0" Padding="10,0">
-                                            <TextBlock Text="{DynamicResource Loc.SC985BF41A8C50565}" Foreground="#667085" FontSize="10" VerticalAlignment="Center" />
+                                        <Border Grid.Column="2" BorderBrush="#E3E7ED" BorderThickness="0,0,1,0">
+                                            <TextBlock Text="{DynamicResource Loc.SC985BF41A8C50565}"
+                                                       Foreground="#667085"
+                                                       FontSize="10"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       TextAlignment="Center" />
                                         </Border>
                                         <Border Grid.Column="3" BorderBrush="#E3E7ED" BorderThickness="0,0,1,0">
-                                            <Button Tag="LastOpened" Style="{StaticResource ListHeaderButton}" Click="ProjectSortHeader_Click">
+                                            <Button Tag="LastOpened"
+                                                    Style="{StaticResource ListHeaderButton}"
+                                                    HorizontalContentAlignment="Center"
+                                                    Click="ProjectSortHeader_Click">
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Text="{DynamicResource Loc.SDC64406EF7D22183}" VerticalAlignment="Center" />
                                                     <TextBlock x:Name="ProjectLastOpenedSortGlyph"
@@ -1375,11 +1528,19 @@
                                                    FontSize="10"
                                                    HorizontalAlignment="Right"
                                                    VerticalAlignment="Center" />
-                                    </Grid>
-                                </Border>
+                                        </Grid>
+                                    </Border>
+                                    <Border Grid.Column="1"
+                                            BorderBrush="#E5E9F0"
+                                            BorderThickness="0,0,0,1" />
+                                </Grid>
                                 <Grid Grid.Row="1">
                                     <TextBlock x:Name="ProjectEmptyText" Text="{DynamicResource Loc.S12A4AE3F3C02AECA}" Foreground="#9AA3B2" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False" />
-                                    <ListBox ItemsSource="{Binding RecentProjects}" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                    <ListBox ItemsSource="{Binding RecentProjects}"
+                                             Background="Transparent"
+                                             BorderThickness="0"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                             ScrollViewer.VerticalScrollBarVisibility="Visible">
                                         <ListBox.ItemContainerStyle>
                                             <Style TargetType="ListBoxItem">
                                                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -1395,8 +1556,8 @@
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="46" />
                                                             <ColumnDefinition Width="*" />
-                                                            <ColumnDefinition Width="128" />
-                                                            <ColumnDefinition Width="152" />
+                                                            <ColumnDefinition Width="140" />
+                                                            <ColumnDefinition Width="140" />
                                                             <ColumnDefinition Width="94" />
                                                             <ColumnDefinition Width="94" />
                                                             <ColumnDefinition Width="78" />
@@ -1443,13 +1604,28 @@
                                                                 </TextBlock.Style>
                                                             </TextBlock>
                                                         </StackPanel>
-                                                        <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                                                            <TextBlock Text="{DynamicResource Loc.SC985BF41A8C50565}" Foreground="#A0A8B6" FontSize="9" />
-                                                            <TextBlock Text="{Binding EditorVersion}" Foreground="#485469" FontSize="11" Margin="0,5,0,0" TextTrimming="CharacterEllipsis" />
+                                                        <StackPanel Grid.Column="2" HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                                                            <TextBlock Text="{DynamicResource Loc.SC985BF41A8C50565}"
+                                                                       Foreground="#A0A8B6"
+                                                                       FontSize="9"
+                                                                       TextAlignment="Center" />
+                                                            <TextBlock Text="{Binding EditorVersion}"
+                                                                       Foreground="#485469"
+                                                                       FontSize="11"
+                                                                       Margin="0,5,0,0"
+                                                                       TextAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis" />
                                                         </StackPanel>
-                                                        <StackPanel Grid.Column="3" VerticalAlignment="Center">
-                                                            <TextBlock Text="{DynamicResource Loc.SDC64406EF7D22183}" Foreground="#A0A8B6" FontSize="9" />
-                                                            <TextBlock Text="{Binding LastOpenedText}" Foreground="#485469" FontSize="11" Margin="0,5,0,0" />
+                                                        <StackPanel Grid.Column="3" HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                                                            <TextBlock Text="{DynamicResource Loc.SDC64406EF7D22183}"
+                                                                       Foreground="#A0A8B6"
+                                                                       FontSize="9"
+                                                                       TextAlignment="Center" />
+                                                            <TextBlock Text="{Binding LastOpenedText}"
+                                                                       Foreground="#485469"
+                                                                       FontSize="11"
+                                                                       Margin="0,5,0,0"
+                                                                       TextAlignment="Center" />
                                                         </StackPanel>
                                                         <Button Grid.Column="4" Content="{DynamicResource Loc.SB4725E21C41C30DA}" CommandParameter="{Binding}" IsEnabled="{Binding IsPipelineSupported}" ToolTip="{Binding PipelineManagementHint}" ToolTipService.ShowOnDisabled="True" Style="{StaticResource SecondaryButton}" Height="32" Padding="10,0" Margin="0,0,8,0" Click="ProjectPipelineManagement_Click">
                                                             <Button.ContextMenu>
@@ -1560,6 +1736,7 @@
                                     <TextBlock Text="{DynamicResource Loc.S3D13868593AE4EEB}" Style="{StaticResource SectionTitle}" VerticalAlignment="Center" />
                                     <ComboBox x:Name="LanguageCombo"
                                               Grid.Column="1"
+                                              Style="{StaticResource Win10SettingsComboBox}"
                                               SelectedValuePath="Tag"
                                               SelectionChanged="LanguageCombo_SelectionChanged">
                                         <ComboBoxItem Content="{DynamicResource Loc.S9937E365AAF3A085}" Tag="zh-CN" />
@@ -1588,6 +1765,7 @@
                                     </StackPanel>
                                     <ComboBox x:Name="ManagementModeCombo"
                                               Grid.Column="1"
+                                              Style="{StaticResource Win10SettingsComboBox}"
                                               SelectedValuePath="Tag"
                                               SelectionChanged="ManagementModeCombo_SelectionChanged">
                                         <ComboBoxItem Content="{DynamicResource settings.mode.auto}" Tag="Auto" />
