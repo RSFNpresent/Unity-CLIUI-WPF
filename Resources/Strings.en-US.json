@@ -295,6 +295,7 @@
   "model.modulesNotRead": "Modules not loaded",
   "model.notRead": "Not loaded",
   "model.pathUnavailable": "Path unavailable",
+  "module.cache.loaded": "Loaded {1} available modules for {0} from cache; {2} installed",
   "module.installedCount": "{0}: {1} modules installed",
   "module.loadFailed": "Failed to load. See task output.",
   "module.loading": "Loading modules for {0}...",

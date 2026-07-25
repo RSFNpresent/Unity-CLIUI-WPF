@@ -295,6 +295,7 @@
   "model.modulesNotRead": "\u672A\u8BFB\u53D6\u6A21\u5757",
   "model.notRead": "\u672A\u8BFB\u53D6",
   "model.pathUnavailable": "\u8DEF\u5F84\u4E0D\u53EF\u7528",
+  "module.cache.loaded": "\u5DF2\u4ECE\u7F13\u5B58\u52A0\u8F7D {0} \u7684 {1} \u4E2A\u53EF\u7528\u6A21\u5757\uFF0C\u5176\u4E2D {2} \u4E2A\u5DF2\u5B89\u88C5",
   "module.installedCount": "{0}\uFF1A\u5DF2\u5B89\u88C5 {1} \u4E2A\u6A21\u5757",
   "module.loadFailed": "\u8BFB\u53D6\u5931\u8D25\uFF0C\u8BF7\u67E5\u770B\u547D\u4EE4\u8F93\u51FA",
   "module.loading": "\u6B63\u5728\u8BFB\u53D6 {0} \u7684\u6A21\u5757...",

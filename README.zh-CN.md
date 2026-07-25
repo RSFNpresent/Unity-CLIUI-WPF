@@ -19,7 +19,7 @@ Unity CLIUI 是一个用于 Windows 的第三方 WPF Unity 管理器。它使用
 - 添加、扫描、排序和启动 Unity 工程，并保存各工程的启动参数。
 - 管理 Unity Pipeline 和 Unity AI Assistant 包。
 - 为支持的 AI 客户端配置 Unity MCP。
-- 在本地缓存编辑器和工程信息。
+- 在本地缓存编辑器、可用模块和工程信息。
 
 ## 构建
 

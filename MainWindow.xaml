@@ -6,6 +6,7 @@
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         mc:Ignorable="d"
         Title="unityCLI-UI"
+        Icon="Assets/AppLogo.ico"
         Width="1440"
         Height="900"
         MinWidth="1120"
@@ -573,15 +574,11 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="24,0,0,0" VerticalAlignment="Center">
-                        <Border Width="34" Height="34" CornerRadius="0" Background="#202B3E" BorderBrush="#202B3E" BorderThickness="1">
-                            <Viewbox Width="17" Height="20" Stretch="Uniform" StretchDirection="Both"
-                                     HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <Path Width="19" Height="22"
-                                      Data="{StaticResource UnityLogoGeometry}"
-                                      Fill="White"
-                                      Stretch="Uniform" />
-                            </Viewbox>
-                        </Border>
+                        <Image Width="34"
+                               Height="34"
+                               Source="{StaticResource AppLogoDrawing}"
+                               Stretch="Uniform"
+                               SnapsToDevicePixels="True" />
                         <TextBlock Text="unityCLI-UI" Foreground="#172033" FontSize="16" FontWeight="SemiBold"
                                    VerticalAlignment="Center" Margin="11,0,0,0" />
                     </StackPanel>

@@ -19,7 +19,7 @@ Unity CLI is not included. Select an existing CLI executable from **Settings**, 
 - Add, scan, sort, and launch Unity projects with per-project arguments.
 - Manage the Unity Pipeline and Unity AI Assistant packages.
 - Configure Unity MCP for supported AI clients.
-- Cache editor and project information locally.
+- Cache editor, available module, and project information locally.
 
 ## Build
 

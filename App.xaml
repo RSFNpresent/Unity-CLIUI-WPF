@@ -4,6 +4,59 @@
              xmlns:local="clr-namespace:unity_cli_ui"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-         
+        <DrawingImage x:Key="AppLogoDrawing">
+            <DrawingImage.Drawing>
+                <DrawingGroup>
+                    <GeometryDrawing Geometry="M128,18 Q130,18 133,20 L213,68 Q216,70 213,73 L183,91 Q180,93 177,91 L131,62 Q128,60 125,62 L79,91 Q76,93 73,91 L43,73 Q40,71 43,68 L123,20 Q126,18 128,18 Z">
+                        <GeometryDrawing.Brush>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#B4B6B8" Offset="0" />
+                                <GradientStop Color="#5E6266" Offset="1" />
+                            </LinearGradientBrush>
+                        </GeometryDrawing.Brush>
+                    </GeometryDrawing>
+                    <GeometryDrawing Geometry="M37,80 Q34,78 34,83 V178 Q34,181 37,183 L117,236 Q121,239 121,234 V193 Q121,190 118,188 L73,159 Q70,157 70,153 V104 Q70,101 67,99 Z">
+                        <GeometryDrawing.Brush>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#9A9DA0" Offset="0" />
+                                <GradientStop Color="#3B3F43" Offset="1" />
+                            </LinearGradientBrush>
+                        </GeometryDrawing.Brush>
+                    </GeometryDrawing>
+                    <GeometryDrawing Geometry="M219,80 Q222,78 222,83 V178 Q222,181 219,183 L139,236 Q135,239 135,234 V193 Q135,190 138,188 L183,159 Q186,157 186,153 V104 Q186,101 189,99 Z">
+                        <GeometryDrawing.Brush>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#45494D" Offset="0" />
+                                <GradientStop Color="#141619" Offset="1" />
+                            </LinearGradientBrush>
+                        </GeometryDrawing.Brush>
+                    </GeometryDrawing>
+                    <GeometryDrawing Geometry="M128,82 L165,103 Q168,105 165,107 L131,127 Q128,129 125,127 L91,107 Q88,105 91,103 Z">
+                        <GeometryDrawing.Brush>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#CACBCD" Offset="0" />
+                                <GradientStop Color="#73777B" Offset="1" />
+                            </LinearGradientBrush>
+                        </GeometryDrawing.Brush>
+                    </GeometryDrawing>
+                    <GeometryDrawing Geometry="M91,107 L128,129 V168 L94,148 Q91,146 91,143 Z">
+                        <GeometryDrawing.Brush>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#6E7276" Offset="0" />
+                                <GradientStop Color="#34383C" Offset="1" />
+                            </LinearGradientBrush>
+                        </GeometryDrawing.Brush>
+                    </GeometryDrawing>
+                    <GeometryDrawing Geometry="M128,129 L165,107 V143 Q165,146 162,148 L128,168 Z">
+                        <GeometryDrawing.Brush>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#414549" Offset="0" />
+                                <GradientStop Color="#151719" Offset="1" />
+                            </LinearGradientBrush>
+                        </GeometryDrawing.Brush>
+                    </GeometryDrawing>
+                </DrawingGroup>
+            </DrawingImage.Drawing>
+        </DrawingImage>
     </Application.Resources>
 </Application>

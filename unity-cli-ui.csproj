@@ -5,12 +5,13 @@
     <TargetFramework>net10.0-windows</TargetFramework>
     <AssemblyName>Unity-CLIUI</AssemblyName>
     <RootNamespace>unity_cli_ui</RootNamespace>
-    <Version>1.0.0</Version>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <FileVersion>1.0.0.0</FileVersion>
-    <InformationalVersion>1.0.0</InformationalVersion>
+    <Version>1.0.1</Version>
+    <AssemblyVersion>1.0.1.0</AssemblyVersion>
+    <FileVersion>1.0.1.0</FileVersion>
+    <InformationalVersion>1.0.1</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Product>Unity CLIUI</Product>
+    <ApplicationIcon>Assets\AppLogo.ico</ApplicationIcon>
     <RepositoryUrl>https://github.com/RSFNpresent/Unity-CLIUI-WPF</RepositoryUrl>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -27,6 +28,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Resource Include="Assets\AppLogo.ico" />
     <None Remove="Resources\Strings.*.json" />
     <Resource Include="Resources\Strings.*.json" />
   </ItemGroup>

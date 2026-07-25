@@ -33,6 +33,8 @@ public partial class MainWindow : Window
 
     private readonly UnityCliService _cli = new();
     private readonly Queue<string> _recentOutput = new();
+    private readonly Dictionary<string, AvailableModulesCacheEntry> _availableModulesCache =
+        new(StringComparer.OrdinalIgnoreCase);
     private bool _isBusy;
     private string _loadedModulesVersion = string.Empty;
     private CliTaskItem? _currentTask;
@@ -61,12 +63,14 @@ public partial class MainWindow : Window
         _isInitializingLanguage = true;
         LanguageCombo.SelectedValue = LocalizationService.CurrentLanguage;
         _isInitializingLanguage = false;
+        LoadAvailableModulesCache();
         LoadEditorInstallationsCache();
         LoadRecentProjects();
         LocalizationService.LanguageChanged += LocalizationService_LanguageChanged;
         Closed += (_, _) =>
         {
             LocalizationService.LanguageChanged -= LocalizationService_LanguageChanged;
+            SaveAvailableModulesCache();
             SaveEditorInstallationsCache();
             SaveManagerSettings();
         };
@@ -591,11 +595,19 @@ public partial class MainWindow : Window
             {
                 Id = string.IsNullOrWhiteSpace(id) ? name : id,
                 Name = string.IsNullOrWhiteSpace(name) ? id : name,
-                Size = ReadString(item, "size", "downloadSize", "installedSize"),
-                Installed = ReadBoolean(item, "installed", "isInstalled")
+                Size = ReadString(item, "size", "download", "downloadSize", "installedSize"),
+                Installed = ReadBoolean(item, "installed", "isInstalled") ||
+                            IsInstalledModuleStatus(ReadString(item, "status", "state"))
             };
         }).Where(item => !string.IsNullOrWhiteSpace(item.Id));
     }
+
+    private static bool IsInstalledModuleStatus(string status) =>
+        status.Equals("installed", StringComparison.OrdinalIgnoreCase) ||
+        status.Contains("\u5DF2\u5B89\u88C5", StringComparison.Ordinal) ||
+        status.Contains("\u5DF2\u5B89\u88DD", StringComparison.Ordinal) ||
+        status.Contains("\u30A4\u30F3\u30B9\u30C8\u30FC\u30EB\u6E08\u307F", StringComparison.Ordinal) ||
+        status.Contains("\uC124\uCE58\uB428", StringComparison.Ordinal);
 
     private static IEnumerable<JsonElement> ExpandModuleRecords(JsonElement item)
     {
@@ -956,10 +968,12 @@ public partial class MainWindow : Window
 
     private void ShowCachedEditorModules(EditorInstallation editor)
     {
-        AvailableModules.Clear();
-        InstalledModules.Clear();
-        InstallableModules.Clear();
-        _loadedModulesVersion = string.Empty;
+        if (TryShowAvailableModulesCache(editor))
+        {
+            return;
+        }
+
+        ClearModuleCollections();
 
         foreach (var moduleName in SplitRegisteredModules(editor.Modules))
         {
@@ -979,6 +993,100 @@ public partial class MainWindow : Window
         ModuleListStatusText.Text = InstalledModules.Count == 0
             ? LocalizationService.Format("editor.cache.noModules", editor.Version)
             : LocalizationService.Format("editor.cache.modules", editor.Version, InstalledModules.Count);
+    }
+
+    private bool TryShowAvailableModulesCache(EditorInstallation editor)
+    {
+        if (!_availableModulesCache.TryGetValue(editor.Version, out var cacheEntry) ||
+            cacheEntry.Modules is null)
+        {
+            return false;
+        }
+
+        PopulateModuleCollections(
+            editor.Version,
+            cacheEntry.Modules.Select(module => new UnityModuleInfo
+            {
+                Id = module.Id,
+                Name = module.Name,
+                Size = module.Size,
+                Installed = module.Installed
+            }),
+            editor.Modules);
+        UpdateModuleStatus(editor.Version, fromCache: true);
+        return true;
+    }
+
+    private void PopulateModuleCollections(
+        string version,
+        IEnumerable<UnityModuleInfo> modules,
+        string? registeredModuleNames)
+    {
+        ClearModuleCollections();
+        var registeredModules = SplitRegisteredModules(registeredModuleNames);
+
+        foreach (var parsedModule in modules
+                     .Where(module => !string.IsNullOrWhiteSpace(module.Id))
+                     .GroupBy(module => module.Id, StringComparer.OrdinalIgnoreCase)
+                     .Select(group => group.First()))
+        {
+            var module = CloneModule(parsedModule, parsedModule.Installed ||
+                registeredModules.Any(registered => ModuleNamesMatch(registered, parsedModule.Name, parsedModule.Id)));
+            AvailableModules.Add(module);
+            if (module.Installed)
+            {
+                InstalledModules.Add(module);
+            }
+            else
+            {
+                InstallableModules.Add(module);
+            }
+        }
+
+        foreach (var registeredModule in registeredModules.Where(registered =>
+                     !AvailableModules.Any(module => ModuleNamesMatch(registered, module.Name, module.Id))))
+        {
+            var module = new UnityModuleInfo
+            {
+                Id = registeredModule,
+                Name = registeredModule,
+                Installed = true
+            };
+            AvailableModules.Add(module);
+            InstalledModules.Add(module);
+        }
+
+        _loadedModulesVersion = version;
+        InstalledModulesEmptyText.Visibility = InstalledModules.Count == 0
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    private void ClearModuleCollections()
+    {
+        AvailableModules.Clear();
+        InstalledModules.Clear();
+        InstallableModules.Clear();
+        _loadedModulesVersion = string.Empty;
+    }
+
+    private void UpdateModuleStatus(string version, bool fromCache)
+    {
+        if (fromCache && AvailableModules.Count > 0)
+        {
+            ModuleListStatusText.Text = LocalizationService.Format(
+                "module.cache.loaded",
+                version,
+                AvailableModules.Count,
+                InstalledModules.Count);
+            return;
+        }
+
+        ModuleListStatusText.Text = AvailableModules.Count == 0
+            ? LocalizationService.Get("module.noneReturned")
+            : InstalledModules.Count == 0
+                ? LocalizationService.Format("module.noneInstalled", version)
+                : LocalizationService.Format("module.installedCount", version, InstalledModules.Count);
     }
 
     private async void ListReleases_Click(object sender, RoutedEventArgs e)
@@ -1104,7 +1212,10 @@ public partial class MainWindow : Window
         EditorListsTabs.SelectedIndex = 0;
         EditorDetailsTabs.SelectedIndex = 0;
         ModuleEditorVersionCombo.SelectedValue = editor.Version;
-        await RefreshModulesAsync();
+        if (!TryShowAvailableModulesCache(editor))
+        {
+            await RefreshModulesAsync();
+        }
     }
 
     private async void LoadSelectedEditorModules_Click(object sender, RoutedEventArgs e)
@@ -1641,10 +1752,9 @@ public partial class MainWindow : Window
             return;
         }
 
-        AvailableModules.Clear();
-        InstalledModules.Clear();
-        InstallableModules.Clear();
-        _loadedModulesVersion = string.Empty;
+        var selectedEditor = InstalledEditors.FirstOrDefault(editor =>
+            string.Equals(editor.Version, version, StringComparison.OrdinalIgnoreCase));
+        ClearModuleCollections();
         ModuleListStatusText.Text = LocalizationService.Format("module.loading", version);
         var result = await ExecuteCliAsync(
             LocalizationService.Get("task.module.load"),
@@ -1653,38 +1763,18 @@ public partial class MainWindow : Window
 
         if (result?.ExitCode != 0)
         {
+            if (selectedEditor is not null && TryShowAvailableModulesCache(selectedEditor))
+            {
+                return;
+            }
+
             ModuleListStatusText.Text = LocalizationService.Get("module.loadFailed");
             return;
         }
 
-        var selectedEditor = InstalledEditors.FirstOrDefault(editor =>
-            string.Equals(editor.Version, version, StringComparison.OrdinalIgnoreCase));
-        var registeredModules = SplitRegisteredModules(selectedEditor?.Modules);
-
-        AvailableModules.Clear();
-        foreach (var parsedModule in ParseModules(result.StandardOutput))
-        {
-            var module = CloneModule(parsedModule, parsedModule.Installed ||
-                registeredModules.Any(registered => ModuleNamesMatch(registered, parsedModule.Name, parsedModule.Id)));
-            AvailableModules.Add(module);
-            if (module.Installed)
-            {
-                InstalledModules.Add(module);
-            }
-            else
-            {
-                InstallableModules.Add(module);
-            }
-        }
-        _loadedModulesVersion = version;
-
-        var installedCount = AvailableModules.Count(module => module.Installed);
-        InstalledModulesEmptyText.Visibility = installedCount == 0 ? Visibility.Visible : Visibility.Collapsed;
-        ModuleListStatusText.Text = AvailableModules.Count == 0
-            ? LocalizationService.Get("module.noneReturned")
-            : installedCount == 0
-                ? LocalizationService.Format("module.noneInstalled", version)
-                : LocalizationService.Format("module.installedCount", version, installedCount);
+        PopulateModuleCollections(version, ParseModules(result.StandardOutput), selectedEditor?.Modules);
+        CacheAvailableModules(version);
+        UpdateModuleStatus(version, fromCache: false);
     }
 
     private static IReadOnlyList<string> SplitRegisteredModules(string? modules) =>
@@ -1746,10 +1836,15 @@ public partial class MainWindow : Window
             return;
         }
 
-        AvailableModules.Clear();
-        InstalledModules.Clear();
-        InstallableModules.Clear();
-        _loadedModulesVersion = string.Empty;
+        var selectedEditor = InstalledEditors.FirstOrDefault(editor =>
+            string.Equals(editor.Version, version, StringComparison.OrdinalIgnoreCase));
+        if (selectedEditor is not null)
+        {
+            ShowCachedEditorModules(selectedEditor);
+            return;
+        }
+
+        ClearModuleCollections();
         InstalledModulesEmptyText.Visibility = Visibility.Collapsed;
         ModuleListStatusText.Text = string.IsNullOrWhiteSpace(version)
             ? LocalizationService.Get("module.selectEditor")
@@ -1771,7 +1866,10 @@ public partial class MainWindow : Window
         ModuleEditorVersionCombo.SelectedValue = editor.Version;
         if (!string.Equals(_loadedModulesVersion, editor.Version, StringComparison.OrdinalIgnoreCase))
         {
-            await RefreshModulesAsync();
+            if (!TryShowAvailableModulesCache(editor))
+            {
+                await RefreshModulesAsync();
+            }
         }
 
         if (InstallableModules.Count == 0)
@@ -3167,6 +3265,70 @@ public partial class MainWindow : Window
         "unityCLI-UI",
         "editor-installations.json");
 
+    private void CacheAvailableModules(string version)
+    {
+        _availableModulesCache[version] = new AvailableModulesCacheEntry
+        {
+            EditorVersion = version,
+            UpdatedAtUtc = DateTimeOffset.UtcNow,
+            Modules = AvailableModules.Select(module => new UnityModuleCacheItem
+            {
+                Id = module.Id,
+                Name = module.Name,
+                Size = module.Size,
+                Installed = module.Installed
+            }).ToList()
+        };
+        SaveAvailableModulesCache();
+    }
+
+    private void LoadAvailableModulesCache()
+    {
+        try
+        {
+            var filePath = GetAvailableModulesCacheFilePath();
+            if (!File.Exists(filePath))
+            {
+                return;
+            }
+
+            var entries = JsonSerializer.Deserialize<List<AvailableModulesCacheEntry>>(
+                File.ReadAllText(filePath)) ?? [];
+            foreach (var entry in entries
+                         .Where(entry => !string.IsNullOrWhiteSpace(entry.EditorVersion) && entry.Modules is not null)
+                         .GroupBy(entry => entry.EditorVersion, StringComparer.OrdinalIgnoreCase)
+                         .Select(group => group.OrderByDescending(entry => entry.UpdatedAtUtc).First()))
+            {
+                _availableModulesCache[entry.EditorVersion] = entry;
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
+        {
+        }
+    }
+
+    private void SaveAvailableModulesCache()
+    {
+        try
+        {
+            var filePath = GetAvailableModulesCacheFilePath();
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+            File.WriteAllText(filePath, JsonSerializer.Serialize(
+                _availableModulesCache.Values
+                    .OrderBy(entry => entry.EditorVersion, StringComparer.OrdinalIgnoreCase)
+                    .ToArray(),
+                new JsonSerializerOptions { WriteIndented = true }));
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+        }
+    }
+
+    private static string GetAvailableModulesCacheFilePath() => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "unityCLI-UI",
+        "available-modules.json");
+
     private async void BrowseCli_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFileDialog
@@ -3645,6 +3807,21 @@ public sealed class EditorRelease
         ? LocalizationService.Get("common.installed")
         : LocalizationService.Get("common.available");
     public string ArchitecturePlatformLabel => $"{(string.IsNullOrWhiteSpace(Architecture) ? LocalizationService.Get("common.unknownArchitecture") : Architecture)} · {(string.IsNullOrWhiteSpace(Platforms) ? "Windows" : Platforms)}";
+}
+
+public sealed class AvailableModulesCacheEntry
+{
+    public string EditorVersion { get; set; } = string.Empty;
+    public DateTimeOffset UpdatedAtUtc { get; set; }
+    public List<UnityModuleCacheItem> Modules { get; set; } = [];
+}
+
+public sealed class UnityModuleCacheItem
+{
+    public string Id { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Size { get; set; } = string.Empty;
+    public bool Installed { get; set; }
 }
 
 public sealed class UnityModuleInfo : INotifyPropertyChanged
