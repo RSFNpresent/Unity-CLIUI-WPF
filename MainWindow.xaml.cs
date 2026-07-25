@@ -14,6 +14,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using unity_cli_ui.Interop;
+using unity_cli_ui.Models;
 using unity_cli_ui.Services;
 
 namespace unity_cli_ui;
@@ -32,6 +33,7 @@ public partial class MainWindow : Window
     private static readonly Regex PercentPattern = new(@"(?<!\d)(?<value>\d{1,3}(?:\.\d+)?)\s*%", RegexOptions.Compiled);
 
     private readonly UnityCliService _cli = new();
+    private readonly DirectUnityService _direct = new();
     private readonly Queue<string> _recentOutput = new();
     private readonly Dictionary<string, AvailableModulesCacheEntry> _availableModulesCache =
         new(StringComparer.OrdinalIgnoreCase);
@@ -39,10 +41,13 @@ public partial class MainWindow : Window
     private string _loadedModulesVersion = string.Empty;
     private CliTaskItem? _currentTask;
     private CancellationTokenSource? _scanCancellation;
+    private CancellationTokenSource? _directCancellation;
     private string _activeEditorFilter = "All";
     private string _projectSortMode = "LastOpened";
     private bool _projectSortDescending = true;
     private bool _isInitializingLanguage;
+    private bool _isInitializingManagerSettings;
+    private ManagementMode _managementMode = ManagementMode.Auto;
     private string _currentPage = "Dashboard";
 
     public ObservableCollection<EditorInstallation> InstalledEditors { get; } = [];
@@ -59,7 +64,17 @@ public partial class MainWindow : Window
         LocalizationService.Initialize(LoadManagerLanguage());
         InitializeComponent();
         DataContext = this;
-        CliScriptInstallPathText.Text = LoadCliInstallDirectory();
+        var managerSettings = LoadManagerSettings();
+        _managementMode = ParseManagementMode(managerSettings.ManagementMode);
+        _isInitializingManagerSettings = true;
+        ManagementModeCombo.SelectedValue = _managementMode.ToString();
+        EditorInstallRootText.Text = string.IsNullOrWhiteSpace(managerSettings.EditorInstallRoot)
+            ? DirectInstallPaths.DefaultEditorRoot
+            : managerSettings.EditorInstallRoot;
+        CliScriptInstallPathText.Text = string.IsNullOrWhiteSpace(managerSettings.CliInstallDirectory)
+            ? GetDefaultCliInstallDirectory()
+            : managerSettings.CliInstallDirectory;
+        _isInitializingManagerSettings = false;
         _isInitializingLanguage = true;
         LanguageCombo.SelectedValue = LocalizationService.CurrentLanguage;
         _isInitializingLanguage = false;
@@ -126,7 +141,13 @@ public partial class MainWindow : Window
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
         DetectCli();
-        if (!string.IsNullOrWhiteSpace(_cli.ExecutablePath))
+        UpdateManagementModeUi();
+        if (UseDirectBackend)
+        {
+            SetDirectReady();
+            await RefreshEditorsAsync(showOutputPageOnFailure: false);
+        }
+        else if (!string.IsNullOrWhiteSpace(_cli.ExecutablePath))
         {
             await VerifyCliAsync();
         }
@@ -181,7 +202,7 @@ public partial class MainWindow : Window
             ? LocalizationService.Get("status.cli.binaryNotFound")
             : _cli.ExecutablePath;
 
-        if (string.IsNullOrWhiteSpace(_cli.ExecutablePath))
+        if (string.IsNullOrWhiteSpace(_cli.ExecutablePath) && !UseDirectBackend)
         {
             SetCliUnavailable();
         }
@@ -234,6 +255,17 @@ public partial class MainWindow : Window
         CliVersionText.Text = message;
         SidebarStatusText.Text = message;
         SidebarStatusDot.Fill = new SolidColorBrush(Color.FromRgb(239, 68, 68));
+    }
+
+    private bool UseDirectBackend => BackendModePolicy.UsesDirectDownloads(_managementMode);
+
+    private void SetDirectReady()
+    {
+        var status = LocalizationService.Get("status.direct.ready");
+        CliVersionText.Text = LocalizationService.Get("status.direct.label");
+        SidebarStatusText.Text = status;
+        SidebarStatusDot.Fill = new SolidColorBrush(Color.FromRgb(34, 197, 94));
+        CliPathSummaryText.Text = LocalizationService.Get("status.direct.summary");
     }
 
     private async Task<CliResult?> ExecuteCliAsync(
@@ -309,6 +341,79 @@ public partial class MainWindow : Window
         }
         finally
         {
+            SetBusy(false, string.Empty);
+        }
+    }
+
+    private async Task<T?> ExecuteDirectAsync<T>(
+        string taskName,
+        IReadOnlyList<string> details,
+        Func<CancellationToken, IProgress<DirectOperationProgress>, Task<T>> operation,
+        bool trackTask = true,
+        bool showOutputPageOnFailure = true)
+    {
+        if (_isBusy)
+        {
+            return default;
+        }
+
+        var task = trackTask ? StartTask(taskName, details) : null;
+        using var cancellation = new CancellationTokenSource();
+        _directCancellation = cancellation;
+        SetBusy(true, taskName);
+        var progress = new Progress<DirectOperationProgress>(update =>
+        {
+            if (task is not null)
+            {
+                task.Detail = update.Detail;
+                task.Status = update.Phase switch
+                {
+                    DirectInstallPhase.Downloading => LocalizationService.Get("common.downloading"),
+                    DirectInstallPhase.Verifying => LocalizationService.Get("common.verifying"),
+                    DirectInstallPhase.Installing => LocalizationService.Get("common.installing"),
+                    DirectInstallPhase.Completed => LocalizationService.Get("common.completed"),
+                    _ => LocalizationService.Get("common.preparing")
+                };
+                if (update.Percent.HasValue)
+                {
+                    task.Progress = Math.Clamp(update.Percent.Value, 0, 100);
+                    task.IsIndeterminate = false;
+                }
+            }
+            if (update.WriteToLog)
+            {
+                AppendOutput(update.Detail);
+            }
+        });
+
+        try
+        {
+            var result = await operation(cancellation.Token, progress);
+            CompleteTask(task, succeeded: true, LocalizationService.Get("common.completed"));
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            AppendOutput(LocalizationService.Get("task.userStopped"));
+            CompleteTask(task, succeeded: false, LocalizationService.Get("common.stopped"));
+            return default;
+        }
+        catch (Exception exception)
+        {
+            AppendOutput(LocalizationService.Format("task.error", exception.Message));
+            CompleteTask(task, succeeded: false, LocalizationService.Get("common.failed"));
+            if (showOutputPageOnFailure)
+            {
+                ShowPage("Output");
+            }
+            return default;
+        }
+        finally
+        {
+            if (ReferenceEquals(_directCancellation, cancellation))
+            {
+                _directCancellation = null;
+            }
             SetBusy(false, string.Empty);
         }
     }
@@ -423,7 +528,11 @@ public partial class MainWindow : Window
         BusyProgress.Visibility = isBusy ? Visibility.Visible : Visibility.Collapsed;
         CancelButton.IsEnabled = isBusy;
         WorkspaceBusyOverlay.Visibility = isBusy ? Visibility.Visible : Visibility.Collapsed;
-        SidebarStatusText.Text = isBusy ? taskName : LocalizationService.Get("status.cli.ready");
+        SidebarStatusText.Text = isBusy
+            ? taskName
+            : UseDirectBackend
+                ? LocalizationService.Get("status.direct.ready")
+                : LocalizationService.Get("status.cli.ready");
     }
 
     private void AppendOutput(string line)
@@ -445,6 +554,12 @@ public partial class MainWindow : Window
 
     private async Task RefreshEditorsAsync(bool showOutputPageOnFailure = true)
     {
+        if (UseDirectBackend)
+        {
+            await RefreshDirectEditorsAsync(showOutputPageOnFailure);
+            return;
+        }
+
         var result = await ExecuteCliAsync(
             LocalizationService.Get("task.editor.loadInstalled"),
             ["--no-banner", "editors", "-i", "--json"],
@@ -503,6 +618,65 @@ public partial class MainWindow : Window
         UpdateEditorFilters();
     }
 
+    private async Task RefreshDirectEditorsAsync(bool showOutputPageOnFailure)
+    {
+        var root = EditorInstallRootText.Text.Trim();
+        var scanned = await ExecuteDirectAsync<IReadOnlyList<InstalledEditorInfo>>(
+            LocalizationService.Get("task.editor.loadInstalled"),
+            [root],
+            (cancellationToken, _) => _direct.ScanInstalledEditorsAsync(root, cancellationToken),
+            trackTask: false,
+            showOutputPageOnFailure: showOutputPageOnFailure);
+        if (scanned is null)
+        {
+            EditorListStatusText.Text = LocalizationService.Get("editor.loadFailed");
+            return;
+        }
+
+        var selectedVersion = ModuleEditorVersionCombo.SelectedValue as string;
+        var existing = InstalledEditors.ToArray();
+        var merged = scanned.Select(item => new EditorInstallation
+        {
+            Version = item.Version,
+            Architecture = item.Architecture,
+            Path = item.Path,
+            Modules = string.Join(",", item.ModuleIds),
+            Channel = string.Empty,
+            IsLts = UnityReleaseCatalogClient.IsLtsVersion(item.Version),
+            IsDefault = existing.FirstOrDefault(cached => cached.Version == item.Version)?.IsDefault == true,
+            IsCachedOnly = false,
+            IsDirectManaged = true
+        }).ToList();
+        foreach (var cached in existing.Where(item => ResolveEditorExecutable(item.Path) is not null))
+        {
+            if (merged.Any(item => string.Equals(item.Version, cached.Version, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+            merged.Add(CloneEditor(cached, isCachedOnly: true));
+        }
+
+        InstalledEditors.Clear();
+        foreach (var editor in merged.OrderByDescending(item => item.Version, StringComparer.OrdinalIgnoreCase))
+        {
+            InstalledEditors.Add(editor);
+        }
+        SaveEditorInstallationsCache();
+        if (!string.IsNullOrWhiteSpace(selectedVersion) && InstalledEditors.Any(editor => editor.Version == selectedVersion))
+        {
+            ModuleEditorVersionCombo.SelectedValue = selectedVersion;
+        }
+        else if (InstalledEditors.Count > 0)
+        {
+            ModuleEditorVersionCombo.SelectedIndex = 0;
+        }
+        EditorCountText.Text = InstalledEditors.Count.ToString();
+        EditorListStatusText.Text = InstalledEditors.Count == 0
+            ? LocalizationService.Get("editor.noneManaged")
+            : LocalizationService.Format("editor.count", InstalledEditors.Count);
+        UpdateEditorFilters();
+    }
+
     private static EditorInstallation MergeEditorLocation(EditorInstallation editor, EditorInstallation? cached)
     {
         var path = ResolveEditorExecutable(editor.Path) is not null
@@ -518,7 +692,8 @@ public partial class MainWindow : Window
             Channel = string.IsNullOrWhiteSpace(editor.Channel) ? cached?.Channel ?? string.Empty : editor.Channel,
             IsLts = editor.IsLts || cached?.IsLts == true,
             IsDefault = editor.IsDefault,
-            IsCachedOnly = false
+            IsCachedOnly = false,
+            IsDirectManaged = cached?.IsDirectManaged == true
         };
     }
 
@@ -531,7 +706,8 @@ public partial class MainWindow : Window
         Channel = editor.Channel,
         IsLts = editor.IsLts,
         IsDefault = editor.IsDefault,
-        IsCachedOnly = isCachedOnly
+        IsCachedOnly = isCachedOnly,
+        IsDirectManaged = editor.IsDirectManaged
     };
 
     private static IEnumerable<EditorInstallation> ParseEditors(string json)
@@ -822,6 +998,64 @@ public partial class MainWindow : Window
         }
 
         LocalizationService.SetLanguage(language);
+        SaveManagerSettings();
+    }
+
+    private async void ManagementModeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isInitializingManagerSettings || ManagementModeCombo?.SelectedValue is not string selectedMode)
+        {
+            return;
+        }
+
+        _managementMode = ParseManagementMode(selectedMode);
+        SaveManagerSettings();
+        UpdateManagementModeUi();
+        if (UseDirectBackend)
+        {
+            SetDirectReady();
+            await RefreshEditorsAsync(showOutputPageOnFailure: false);
+        }
+        else if (!string.IsNullOrWhiteSpace(_cli.ExecutablePath) && File.Exists(_cli.ExecutablePath))
+        {
+            await VerifyCliAsync();
+        }
+        else
+        {
+            SetCliUnavailable();
+        }
+    }
+
+    private void UpdateManagementModeUi()
+    {
+        if (CliSettingsCard is null)
+        {
+            return;
+        }
+        CliSettingsCard.Visibility = _managementMode == ManagementMode.UnityCli
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        if (UseDirectBackend)
+        {
+            SetDirectReady();
+        }
+    }
+
+    private void BrowseEditorInstallRoot_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFolderDialog
+        {
+            Title = LocalizationService.Get("dialog.selectEditorInstallRoot"),
+            Multiselect = false,
+            InitialDirectory = Directory.Exists(EditorInstallRootText.Text)
+                ? EditorInstallRootText.Text
+                : DirectInstallPaths.DefaultEditorRoot
+        };
+        if (dialog.ShowDialog(this) != true)
+        {
+            return;
+        }
+        EditorInstallRootText.Text = dialog.FolderName;
         SaveManagerSettings();
     }
 
@@ -1142,6 +1376,42 @@ public partial class MainWindow : Window
     private async Task RefreshReleasesAsync()
     {
         ReleaseListStatusText.Text = LocalizationService.Get("release.loading");
+        if (UseDirectBackend)
+        {
+            var releases = await ExecuteDirectAsync<IReadOnlyList<UnityReleaseInfo>>(
+                LocalizationService.Get("task.release.load"),
+                ["Unity Release API"],
+                (cancellationToken, _) => _direct.GetReleasesAsync(cancellationToken),
+                trackTask: false);
+            if (releases is null)
+            {
+                ReleaseListStatusText.Text = LocalizationService.Get("editor.loadFailed");
+                return;
+            }
+
+            AvailableEditors.Clear();
+            foreach (var release in releases.Where(item => item.GetWindowsX64Download() is not null))
+            {
+                AvailableEditors.Add(new EditorRelease
+                {
+                    Version = release.Version,
+                    Alias = release.Stream,
+                    Architecture = "X86_64",
+                    Platforms = "Windows",
+                    Installed = InstalledEditors.Any(editor =>
+                        string.Equals(editor.Version, release.Version, StringComparison.OrdinalIgnoreCase))
+                });
+            }
+            ReleaseListStatusText.Text = AvailableEditors.Count == 0
+                ? LocalizationService.Get("release.none")
+                : LocalizationService.Format("release.count", AvailableEditors.Count);
+            if (AvailableEditorsGrid.SelectedItem is null && AvailableEditors.Count > 0)
+            {
+                AvailableEditorsGrid.SelectedIndex = 0;
+            }
+            return;
+        }
+
         var result = await ExecuteCliAsync(
             LocalizationService.Get("task.release.load"),
             ["--no-banner", "editors", "-r", "--json"],
@@ -1317,6 +1587,30 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (UseDirectBackend)
+        {
+            for (var index = 0; index < InstalledEditors.Count; index++)
+            {
+                var item = InstalledEditors[index];
+                InstalledEditors[index] = new EditorInstallation
+                {
+                    Version = item.Version,
+                    Architecture = item.Architecture,
+                    Path = item.Path,
+                    Modules = item.Modules,
+                    Channel = item.Channel,
+                    IsLts = item.IsLts,
+                    IsDefault = string.Equals(item.Version, editor.Version, StringComparison.OrdinalIgnoreCase),
+                    IsCachedOnly = item.IsCachedOnly,
+                    IsDirectManaged = item.IsDirectManaged
+                };
+            }
+            SaveEditorInstallationsCache();
+            ApplyEditorFilter();
+            SelectEditorVersion(editor.Version);
+            return;
+        }
+
         var result = await ExecuteCliAsync(
             LocalizationService.Format("task.editor.setDefault", editor.Version),
             ["--non-interactive", "editors", "default", editor.Version]);
@@ -1331,6 +1625,24 @@ public partial class MainWindow : Window
     {
         if (InstalledEditorsGrid.SelectedItem is not EditorInstallation editor)
         {
+            return;
+        }
+
+        if (UseDirectBackend)
+        {
+            var latest = await ExecuteDirectAsync<UnityReleaseInfo?>(
+                LocalizationService.Format("task.editor.checkUpdate", editor.Version),
+                [editor.Version],
+                (cancellationToken, _) => _direct.GetLatestPatchAsync(editor.Version, cancellationToken),
+                trackTask: false);
+            var message = latest is null || string.Equals(latest.Version, editor.Version, StringComparison.OrdinalIgnoreCase)
+                ? LocalizationService.Get("editor.noPatchUpdate")
+                : LocalizationService.Format("editor.patchAvailable", latest.Version);
+            ShowLocalizedMessage(
+                message,
+                LocalizationService.Get("dialog.editorUpdate.title"),
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
             return;
         }
 
@@ -1352,8 +1664,34 @@ public partial class MainWindow : Window
 
     private async void UpgradeSelectedEditor_Click(object sender, RoutedEventArgs e)
     {
-        if (InstalledEditorsGrid.SelectedItem is not EditorInstallation editor ||
-            !Confirm(LocalizationService.Format("confirm.editor.upgrade", editor.Version)))
+        if (InstalledEditorsGrid.SelectedItem is not EditorInstallation editor)
+        {
+            return;
+        }
+
+        if (UseDirectBackend)
+        {
+            var latest = await ExecuteDirectAsync<UnityReleaseInfo?>(
+                LocalizationService.Format("task.editor.checkUpdate", editor.Version),
+                [editor.Version],
+                (cancellationToken, _) => _direct.GetLatestPatchAsync(editor.Version, cancellationToken),
+                trackTask: false);
+            if (latest is null || string.Equals(latest.Version, editor.Version, StringComparison.OrdinalIgnoreCase))
+            {
+                ShowLocalizedMessage(
+                    LocalizationService.Get("editor.noPatchUpdate"),
+                    LocalizationService.Get("dialog.editorUpdate.title"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+            InstallVersionText.Text = latest.Version;
+            InstallPatchText.Clear();
+            InstallModulesText.Text = editor.Modules;
+            await InstallEditorVersionAsync(latest.Version);
+            return;
+        }
+        if (!Confirm(LocalizationService.Format("confirm.editor.upgrade", editor.Version)))
         {
             return;
         }
@@ -1373,6 +1711,24 @@ public partial class MainWindow : Window
         if (InstalledEditorsGrid.SelectedItem is not EditorInstallation editor ||
             !Confirm(LocalizationService.Format("confirm.editor.uninstall", editor.Version)))
         {
+            return;
+        }
+
+        if (UseDirectBackend)
+        {
+            var editorRoot = ResolveEditorRoot(editor.Path);
+            var directExecution = await ExecuteDirectAsync<object>(
+                LocalizationService.Format("task.editor.uninstall", editor.Version),
+                [editorRoot],
+                async (cancellationToken, progress) =>
+                {
+                    await _direct.UninstallEditorAsync(editor.Version, editorRoot, progress, cancellationToken);
+                    return new object();
+                });
+            if (directExecution is not null)
+            {
+                await RefreshEditorsAsync();
+            }
             return;
         }
 
@@ -1418,6 +1774,23 @@ public partial class MainWindow : Window
         }.FirstOrDefault(File.Exists);
     }
 
+    private static string ResolveEditorRoot(string path)
+    {
+        if (Directory.Exists(path))
+        {
+            return Path.GetFullPath(path);
+        }
+        if (File.Exists(path))
+        {
+            var editorDirectory = Directory.GetParent(path);
+            if (editorDirectory?.Parent is { } root)
+            {
+                return root.FullName;
+            }
+        }
+        return Path.GetFullPath(path);
+    }
+
     private async void InstallLts_Click(object sender, RoutedEventArgs e)
     {
         InstallVersionText.Text = "lts";
@@ -1455,6 +1828,31 @@ public partial class MainWindow : Window
         if (!Confirm(confirmation))
         {
             return false;
+        }
+
+        if (UseDirectBackend)
+        {
+            var taskName = LocalizationService.Format(
+                dryRun ? "task.editor.preview" : "task.editor.install",
+                version);
+            var directResult = await ExecuteDirectAsync<DirectInstallResult>(
+                taskName,
+                [version, EditorInstallRootText.Text.Trim(), .. modules],
+                (cancellationToken, progress) => _direct.InstallEditorAsync(
+                    new DirectInstallRequest(
+                        version,
+                        EditorInstallRootText.Text.Trim(),
+                        modules,
+                        dryRun,
+                        InstallAcceptEulaCheck.IsChecked == true),
+                    progress,
+                    cancellationToken),
+                trackTask: !dryRun);
+            if (directResult is not null && !dryRun)
+            {
+                await RefreshEditorsAsync();
+            }
+            return directResult is not null;
         }
 
         var arguments = new List<string> { "--non-interactive", "install", version, "-y" };
@@ -1556,6 +1954,12 @@ public partial class MainWindow : Window
         var newEditors = editorExecutables.Except(alreadyRegistered, StringComparer.OrdinalIgnoreCase).ToArray();
         CacheScannedEditorInstallations(editorExecutables);
         EditorListsTabs.SelectedIndex = 0;
+        if (UseDirectBackend)
+        {
+            SelectScannedEditor(editorExecutables);
+            SetEditorScanStatus(LocalizationService.Format("editor.scan.cached", editorExecutables.Count));
+            return;
+        }
         SelectScannedEditor(editorExecutables);
         if (newEditors.Length == 0)
         {
@@ -1648,7 +2052,8 @@ public partial class MainWindow : Window
                 Channel = existing?.Channel ?? string.Empty,
                 IsLts = existing?.IsLts == true,
                 IsDefault = existing?.IsDefault == true,
-                IsCachedOnly = existing?.IsCachedOnly ?? true
+                IsCachedOnly = existing?.IsCachedOnly ?? !UseDirectBackend,
+                IsDirectManaged = UseDirectBackend || existing?.IsDirectManaged == true
             };
 
             if (existing is null)
@@ -1756,6 +2161,45 @@ public partial class MainWindow : Window
             string.Equals(editor.Version, version, StringComparison.OrdinalIgnoreCase));
         ClearModuleCollections();
         ModuleListStatusText.Text = LocalizationService.Format("module.loading", version);
+        if (UseDirectBackend)
+        {
+            if (selectedEditor is null)
+            {
+                ModuleListStatusText.Text = LocalizationService.Get("module.noEditors");
+                return;
+            }
+            var directModules = await ExecuteDirectAsync<IReadOnlyList<DirectModuleStatus>>(
+                LocalizationService.Get("task.module.load"),
+                [version],
+                (cancellationToken, _) => _direct.GetModulesAsync(
+                    version,
+                    ResolveEditorRoot(selectedEditor.Path),
+                    cancellationToken),
+                trackTask: false);
+            if (directModules is null)
+            {
+                if (TryShowAvailableModulesCache(selectedEditor))
+                {
+                    return;
+                }
+                ModuleListStatusText.Text = LocalizationService.Get("module.loadFailed");
+                return;
+            }
+            PopulateModuleCollections(
+                version,
+                directModules.Select(item => new UnityModuleInfo
+                {
+                    Id = item.Package.Id,
+                    Name = item.Package.Name,
+                    Size = FormatPackageSize(item.Package.DownloadSize.Value),
+                    Installed = item.Installed
+                }),
+                selectedEditor.Modules);
+            CacheAvailableModules(version);
+            UpdateModuleStatus(version, fromCache: false);
+            return;
+        }
+
         var result = await ExecuteCliAsync(
             LocalizationService.Get("task.module.load"),
             ["--no-banner", "--format", "json", "install-modules", "-e", version, "-l"],
@@ -1824,6 +2268,23 @@ public partial class MainWindow : Window
             .Replace("(il2cpp)", string.Empty, StringComparison.Ordinal)
             .Replace("module", string.Empty, StringComparison.Ordinal);
         return Regex.Replace(normalized, @"[^\p{L}\p{N}]+", string.Empty);
+    }
+
+    private static string FormatPackageSize(long bytes)
+    {
+        if (bytes <= 0)
+        {
+            return string.Empty;
+        }
+        string[] units = ["B", "KB", "MB", "GB"];
+        var value = (double)bytes;
+        var unit = 0;
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+        return $"{value:0.#} {units[unit]}";
     }
 
     private async void ListModules_Click(object sender, RoutedEventArgs e) => await RefreshModulesAsync();
@@ -1900,6 +2361,37 @@ public partial class MainWindow : Window
         bool dryRun,
         bool acceptEula)
     {
+        if (UseDirectBackend)
+        {
+            var editor = InstalledEditors.FirstOrDefault(item =>
+                string.Equals(item.Version, version, StringComparison.OrdinalIgnoreCase));
+            if (editor is null)
+            {
+                return;
+            }
+            var directResult = await ExecuteDirectAsync<DirectInstallResult>(
+                LocalizationService.Get(dryRun ? "task.module.preview" : "task.module.install"),
+                [version, .. modules],
+                (cancellationToken, progress) => _direct.InstallModulesAsync(
+                    new DirectModuleInstallRequest(
+                        version,
+                        ResolveEditorRoot(editor.Path),
+                        modules,
+                        dryRun,
+                        acceptEula),
+                    progress,
+                    cancellationToken),
+                trackTask: !dryRun);
+            if (directResult is not null && !dryRun)
+            {
+                await RefreshEditorsAsync();
+                SelectEditorVersion(version);
+                ModuleEditorVersionCombo.SelectedValue = version;
+                await RefreshModulesAsync();
+            }
+            return;
+        }
+
         var arguments = new List<string>
         {
             "--non-interactive", "install-modules", "-e", version, "-m"
@@ -2153,6 +2645,30 @@ public partial class MainWindow : Window
                 project.EditorVersion)))
         {
             return false;
+        }
+
+        if (UseDirectBackend)
+        {
+            var directResult = await ExecuteDirectAsync<DirectInstallResult>(
+                LocalizationService.Format("task.editor.install", project.EditorVersion),
+                [project.EditorVersion, EditorInstallRootText.Text.Trim()],
+                (cancellationToken, progress) => _direct.InstallEditorAsync(
+                    new DirectInstallRequest(
+                        project.EditorVersion,
+                        EditorInstallRootText.Text.Trim(),
+                        [],
+                        DryRun: false,
+                        AcceptEula: false),
+                    progress,
+                    cancellationToken));
+            if (directResult is null)
+            {
+                return false;
+            }
+            await RefreshEditorsAsync();
+            return InstalledEditors.Any(candidate =>
+                string.Equals(candidate.Version, project.EditorVersion, StringComparison.OrdinalIgnoreCase) &&
+                ResolveEditorExecutable(candidate.Path) is not null);
         }
 
         var result = await ExecuteCliAsync(
@@ -3107,44 +3623,32 @@ public partial class MainWindow : Window
         "Unity",
         "bin");
 
-    private string LoadCliInstallDirectory()
+    private static ManagerSettings LoadManagerSettings()
     {
         try
         {
             var filePath = GetManagerSettingsFilePath();
             if (!File.Exists(filePath))
             {
-                return GetDefaultCliInstallDirectory();
+                return new ManagerSettings();
             }
-
-            var settings = JsonSerializer.Deserialize<ManagerSettings>(File.ReadAllText(filePath));
-            return string.IsNullOrWhiteSpace(settings?.CliInstallDirectory)
-                ? GetDefaultCliInstallDirectory()
-                : settings.CliInstallDirectory;
+            return JsonSerializer.Deserialize<ManagerSettings>(File.ReadAllText(filePath))
+                   ?? new ManagerSettings();
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
         {
-            return GetDefaultCliInstallDirectory();
+            return new ManagerSettings();
         }
     }
 
+    private static ManagementMode ParseManagementMode(string? value) =>
+        Enum.TryParse<ManagementMode>(value, ignoreCase: true, out var mode)
+            ? mode
+            : ManagementMode.Auto;
+
     private static string LoadManagerLanguage()
     {
-        try
-        {
-            var filePath = GetManagerSettingsFilePath();
-            if (!File.Exists(filePath))
-            {
-                return LocalizationService.Chinese;
-            }
-
-            var settings = JsonSerializer.Deserialize<ManagerSettings>(File.ReadAllText(filePath));
-            return settings?.Language ?? LocalizationService.Chinese;
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
-        {
-            return LocalizationService.Chinese;
-        }
+        return LoadManagerSettings().Language;
     }
 
     private void SaveManagerSettings()
@@ -3156,7 +3660,9 @@ public partial class MainWindow : Window
             File.WriteAllText(filePath, JsonSerializer.Serialize(new ManagerSettings
             {
                 CliInstallDirectory = CliScriptInstallPathText.Text.Trim(),
-                Language = LocalizationService.CurrentLanguage
+                Language = LocalizationService.CurrentLanguage,
+                ManagementMode = _managementMode.ToString(),
+                EditorInstallRoot = EditorInstallRootText.Text.Trim()
             }, new JsonSerializerOptions
             {
                 WriteIndented = true
@@ -3199,7 +3705,8 @@ public partial class MainWindow : Window
                     Channel = cached.Channel,
                     IsLts = cached.IsLts,
                     IsDefault = cached.IsDefault,
-                    IsCachedOnly = cached.RegisteredWithCli == false
+                    IsCachedOnly = cached.RegisteredWithCli == false,
+                    IsDirectManaged = cached.DirectManaged
                 });
             }
 
@@ -3241,7 +3748,8 @@ public partial class MainWindow : Window
                     Channel = editor.Channel,
                     IsLts = editor.IsLts,
                     IsDefault = editor.IsDefault,
-                    RegisteredWithCli = !editor.IsCachedOnly
+                    RegisteredWithCli = !editor.IsCachedOnly && !editor.IsDirectManaged,
+                    DirectManaged = editor.IsDirectManaged
                 })
                 .ToArray();
 
@@ -3544,6 +4052,17 @@ public partial class MainWindow : Window
 
     private void Cancel_Click(object sender, RoutedEventArgs e)
     {
+        if (_directCancellation is not null)
+        {
+            _directCancellation.Cancel();
+            SidebarStatusText.Text = LocalizationService.Get("common.stopping");
+            if (_currentTask is not null)
+            {
+                _currentTask.Status = LocalizationService.Get("common.stopping");
+            }
+            return;
+        }
+
         if (_scanCancellation is not null)
         {
             _scanCancellation.Cancel();
@@ -3690,6 +4209,8 @@ public sealed class ManagerSettings
 {
     public string CliInstallDirectory { get; init; } = string.Empty;
     public string Language { get; init; } = LocalizationService.Chinese;
+    public string ManagementMode { get; init; } = nameof(Services.ManagementMode.Auto);
+    public string EditorInstallRoot { get; init; } = string.Empty;
 }
 
 public sealed class EditorInstallation
@@ -3702,6 +4223,7 @@ public sealed class EditorInstallation
     public bool IsLts { get; init; }
     public bool IsDefault { get; init; }
     public bool IsCachedOnly { get; init; }
+    public bool IsDirectManaged { get; init; }
 
     public bool IsPreview =>
         Version.Contains("a", StringComparison.OrdinalIgnoreCase) ||
@@ -3722,7 +4244,9 @@ public sealed class EditorInstallation
         : LocalizationService.Get("common.no");
     public string SourceLabel => IsCachedOnly
         ? LocalizationService.Get("model.localCache")
-        : "Unity Hub / CLI";
+        : IsDirectManaged
+            ? LocalizationService.Get("model.direct")
+            : "Unity Hub / CLI";
     public string InstallationDateText
     {
         get
@@ -3784,6 +4308,7 @@ public sealed class EditorInstallationCache
     public bool IsLts { get; set; }
     public bool IsDefault { get; set; }
     public bool? RegisteredWithCli { get; set; }
+    public bool DirectManaged { get; set; }
 }
 
 public sealed class EditorRelease

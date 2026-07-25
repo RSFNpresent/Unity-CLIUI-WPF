@@ -2,7 +2,7 @@
 
 [English](README.md) | [开发计划](TODO.md)
 
-Unity CLIUI 是一个用于 Windows 的第三方 WPF Unity 管理器。它使用 [Unity 官方 CLI](https://docs.unity.com/zh-cn/unity-cli/unity-cli) 管理编辑器版本和模块，并集中管理本地 Unity 工程。
+Unity CLIUI 是一个用于 Windows 的第三方 WPF Unity 管理器。无需安装 Unity CLI，即可通过 Unity 官方 Release API 和 CDN 管理编辑器版本与模块，并集中管理本地 Unity 工程。[Unity 官方 CLI](https://docs.unity.com/zh-cn/unity-cli/unity-cli) 仍可作为可选后端使用。
 
 界面参考 Windows 10 设置，支持简体中文和英文。
 
@@ -10,12 +10,15 @@ Unity CLIUI 是一个用于 Windows 的第三方 WPF Unity 管理器。它使用
 
 从 [Releases](https://github.com/RSFNpresent/Unity-CLIUI-WPF/releases) 下载 Windows x64 压缩包，解压后运行 `Unity-CLIUI.exe`。
 
-发布包不包含 Unity CLI。可以在“设置”中选择已有 CLI、打开 Unity 官方下载页面，或运行官方安装脚本。
+发布包不包含 Unity CLI。在“设置”中明确选择“直连（无 CLI）”后，才会启用官方软件包的下载与安装。“自动”模式只检测已有 CLI，不会隐式切换到直连下载。
 
-## 1.0 版本
+## 1.0.1 版本
 
-- 安装、扫描、更新和启动 Unity 编辑器。
-- 查看和管理编辑器模块。
+- 在有无 Unity CLI 的环境中安装、扫描、更新、卸载和启动 Unity 编辑器。
+- 从 Unity 官方 Release API 获取编辑器与模块清单。
+- 最多并行断点下载三个包，校验官方完整性信息，并在独立 staging 中安全解压后提交。
+- 按 Unity 清单应用 `destination` 和 `extractedPathRename`，同时防止路径穿越。
+- 查看并安装编辑器模块及其必需的嵌套依赖。
 - 添加、扫描、排序和启动 Unity 工程，并保存各工程的启动参数。
 - 管理 Unity Pipeline 和 Unity AI Assistant 包。
 - 为支持的 AI 客户端配置 Unity MCP。
@@ -31,7 +34,22 @@ cd Unity-CLIUI-WPF
 dotnet build unity-cli-ui.csproj
 ```
 
-Unity CLI 可执行文件已被 Git 忽略，也不会包含在发布包中。
+## 发布
+
+使用仓库内固定的 Publish Profile 生成 Windows x64 发布包：
+
+```powershell
+dotnet publish unity-cli-ui.csproj -p:PublishProfile=win-x64-self-contained
+dotnet publish unity-cli-ui.csproj -p:PublishProfile=win-x64-framework-dependent
+```
+
+每个 Profile 都只生成 `Unity-CLIUI.exe`。如果发布目录出现任何其他文件，发布会直接失败。Unity CLI 可执行文件已被 Git 忽略，且不会被包含。
+
+无需外部测试包即可运行直连后端回归测试：
+
+```powershell
+dotnet run --project Tests\UnityCliUi.DirectTests\UnityCliUi.DirectTests.csproj -c Release
+```
 
 ## 贡献者
 

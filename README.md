@@ -2,7 +2,7 @@
 
 [简体中文](README.zh-CN.md) | [Roadmap](TODO.md)
 
-Unity CLIUI is a small third-party WPF manager for Unity on Windows. It uses the official [Unity CLI](https://docs.unity.com/en-us/unity-cli/unity-cli) to manage editor versions and modules, and keeps local Unity projects in one place.
+Unity CLIUI is a small third-party WPF manager for Unity on Windows. It can manage editor versions and modules directly through Unity's official Release API and CDN without installing Unity CLI, and keeps local Unity projects in one place. The official [Unity CLI](https://docs.unity.com/en-us/unity-cli/unity-cli) remains available as an optional backend.
 
 The interface follows the Windows 10 Settings style and is available in English and Simplified Chinese.
 
@@ -10,12 +10,15 @@ The interface follows the Windows 10 Settings style and is available in English 
 
 Download the Windows x64 package from [Releases](https://github.com/RSFNpresent/Unity-CLIUI-WPF/releases), extract it, and run `Unity-CLIUI.exe`.
 
-Unity CLI is not included. Select an existing CLI executable from **Settings**, open Unity's official download page, or run the official installer from the app.
+Unity CLI is not included. Select **Direct (no CLI)** in **Settings** to enable official package downloads and installation without the CLI. **Auto** only detects an existing CLI and never switches to direct downloads implicitly.
 
-## Version 1.0
+## Version 1.0.1
 
-- Install, scan, update, and launch Unity editors.
-- View and manage editor modules.
+- Install, scan, update, uninstall, and launch Unity editors with or without Unity CLI.
+- Discover editor packages and modules from Unity's official Release API.
+- Resume up to three package downloads in parallel, verify official integrity metadata, and stage ZIP extraction before committing files.
+- Apply Unity package `destination` and `extractedPathRename` rules with path traversal protection.
+- View and install editor modules and their required nested dependencies.
 - Add, scan, sort, and launch Unity projects with per-project arguments.
 - Manage the Unity Pipeline and Unity AI Assistant packages.
 - Configure Unity MCP for supported AI clients.
@@ -31,7 +34,22 @@ cd Unity-CLIUI-WPF
 dotnet build unity-cli-ui.csproj
 ```
 
-The Unity CLI executable is ignored by Git and is not included in release packages.
+## Publish
+
+Use the checked-in publish profiles to create the Windows x64 packages:
+
+```powershell
+dotnet publish unity-cli-ui.csproj -p:PublishProfile=win-x64-self-contained
+dotnet publish unity-cli-ui.csproj -p:PublishProfile=win-x64-framework-dependent
+```
+
+Each profile produces only `Unity-CLIUI.exe`. Publishing fails if any additional file is present. The Unity CLI executable is ignored by Git and is never included.
+
+Run the direct-backend regression suite without external test packages:
+
+```powershell
+dotnet run --project Tests\UnityCliUi.DirectTests\UnityCliUi.DirectTests.csproj -c Release
+```
 
 ## Contributors
 

@@ -16,18 +16,25 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <IncludeBundledUnityCli Condition="'$(IncludeBundledUnityCli)' == ''">true</IncludeBundledUnityCli>
+    <NuGetAudit>false</NuGetAudit>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
+    <SelfContained Condition="'$(SelfContained)' == ''">false</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>None</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' != 'Release'">
+    <DebugType>embedded</DebugType>
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="unitycli-windows-x64.exe"
-             Condition="Exists('unitycli-windows-x64.exe') and '$(IncludeBundledUnityCli)' == 'true'">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </Content>
-  </ItemGroup>
-
-  <ItemGroup>
+    <Content Remove="unitycli-*.exe" />
+    <Compile Remove="Tests\**\*.cs" />
+    <None Remove="unitycli-*.exe" />
     <Resource Include="Assets\AppLogo.ico" />
     <None Remove="Resources\Strings.*.json" />
     <Resource Include="Resources\Strings.*.json" />
@@ -42,5 +49,16 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </Compile>
   </ItemGroup>
+
+  <Target Name="ValidatePublishedLayout" AfterTargets="Publish">
+    <ItemGroup>
+      <_UnexpectedPublishedFile Include="$(PublishDir)**\*"
+                                Exclude="$(PublishDir)$(AssemblyName).exe" />
+    </ItemGroup>
+    <Error Condition="!Exists('$(PublishDir)$(AssemblyName).exe')"
+           Text="Publish output is missing $(AssemblyName).exe." />
+    <Error Condition="'@(_UnexpectedPublishedFile)' != ''"
+           Text="Publish output must contain only $(AssemblyName).exe. Unexpected files: @(_UnexpectedPublishedFile, ', ')" />
+  </Target>
 
 </Project>

@@ -2,6 +2,7 @@
 .tmp/
 bin/
 obj/
+artifacts/
 
 *.suo
 *.user

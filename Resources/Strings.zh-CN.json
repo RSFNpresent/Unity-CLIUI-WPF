@@ -376,5 +376,17 @@
   "task.release.load": "\u8BFB\u53D6\u53EF\u7528\u7F16\u8F91\u5668\u7248\u672C",
   "task.startedAt": "\u5F00\u59CB\u4E8E {0:HH:mm:ss}",
   "task.stopped": "[\u505C\u6B62] {0}",
-  "task.userStopped": "[\u505C\u6B62] \u7528\u6237\u8BF7\u6C42\u7EC8\u6B62\u5F53\u524D\u4EFB\u52A1"
+  "task.userStopped": "[\u505C\u6B62] \u7528\u6237\u8BF7\u6C42\u7EC8\u6B62\u5F53\u524D\u4EFB\u52A1",
+  "status.direct.ready": "\u76F4\u8FDE\u6A21\u5F0F\u5DF2\u5C31\u7EEA",
+  "status.direct.label": "\u65E0 CLI",
+  "status.direct.summary": "Unity \u5B98\u65B9 Release API / CDN",
+  "settings.managementMode": "\u7F16\u8F91\u5668\u7BA1\u7406\u6A21\u5F0F",
+  "settings.managementModeHint": "\u4EC5\u76F4\u8FDE\u6A21\u5F0F\u4F1A\u5728\u4E0D\u4F7F\u7528 Unity CLI \u65F6\u4E0B\u8F7D\u5E76\u5B89\u88C5\u8F6F\u4EF6\u5305\u3002",
+  "settings.mode.auto": "\u81EA\u52A8\uFF08\u68C0\u6D4B CLI\uFF09",
+  "settings.mode.direct": "\u76F4\u8FDE\uFF08\u65E0 CLI\uFF09",
+  "settings.mode.cli": "Unity CLI",
+  "settings.editorInstallRoot": "\u7F16\u8F91\u5668\u5B89\u88C5\u6839\u76EE\u5F55",
+  "dialog.selectEditorInstallRoot": "\u9009\u62E9 Unity \u7F16\u8F91\u5668\u5B89\u88C5\u6839\u76EE\u5F55",
+  "model.direct": "\u76F4\u8FDE",
+  "editor.patchAvailable": "\u8BE5\u53D1\u5E03\u7EBF\u53EF\u5347\u7EA7\u5230 Unity {0}\u3002"
 }

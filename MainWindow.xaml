@@ -1567,7 +1567,51 @@
                                     </ComboBox>
                                 </Grid>
                             </Border>
-                            <Border Style="{StaticResource Card}">
+                            <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="16" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="260" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center" Margin="0,0,24,0">
+                                        <TextBlock Text="{DynamicResource settings.managementMode}" Style="{StaticResource SectionTitle}" />
+                                        <TextBlock Text="{DynamicResource settings.managementModeHint}"
+                                                   Foreground="#647087"
+                                                   FontSize="11"
+                                                   Margin="0,4,0,0"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <ComboBox x:Name="ManagementModeCombo"
+                                              Grid.Column="1"
+                                              SelectedValuePath="Tag"
+                                              SelectionChanged="ManagementModeCombo_SelectionChanged">
+                                        <ComboBoxItem Content="{DynamicResource settings.mode.auto}" Tag="Auto" />
+                                        <ComboBoxItem Content="{DynamicResource settings.mode.direct}" Tag="Direct" />
+                                        <ComboBoxItem Content="{DynamicResource settings.mode.cli}" Tag="UnityCli" />
+                                    </ComboBox>
+                                    <StackPanel Grid.Row="2" Grid.ColumnSpan="2">
+                                        <TextBlock Text="{DynamicResource settings.editorInstallRoot}" Style="{StaticResource FieldLabel}" />
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="8" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox x:Name="EditorInstallRootText" />
+                                            <Button Grid.Column="2"
+                                                    Content="{DynamicResource Loc.SE5FE24CA742F83D9}"
+                                                    Style="{StaticResource SecondaryButton}"
+                                                    Click="BrowseEditorInstallRoot_Click" />
+                                        </Grid>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                            <Border x:Name="CliSettingsCard" Style="{StaticResource Card}">
                                 <StackPanel>
                                     <TextBlock Text="{DynamicResource Loc.SF06A2FA4363E648F}" Style="{StaticResource SectionTitle}" />
 

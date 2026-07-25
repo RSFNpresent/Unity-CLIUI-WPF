@@ -376,5 +376,17 @@
   "task.release.load": "Load available editor versions",
   "task.startedAt": "Started at {0:HH:mm:ss}",
   "task.stopped": "[Stopped] {0}",
-  "task.userStopped": "[Stopped] The user requested that the current task stop"
+  "task.userStopped": "[Stopped] The user requested that the current task stop",
+  "status.direct.ready": "Direct mode ready",
+  "status.direct.label": "No CLI",
+  "status.direct.summary": "Official Unity Release API / CDN",
+  "settings.managementMode": "Editor management mode",
+  "settings.managementModeHint": "Direct mode is the only mode that downloads and installs packages without Unity CLI.",
+  "settings.mode.auto": "Auto (detect CLI)",
+  "settings.mode.direct": "Direct (no CLI)",
+  "settings.mode.cli": "Unity CLI",
+  "settings.editorInstallRoot": "Editor install root",
+  "dialog.selectEditorInstallRoot": "Select the Unity editor install root",
+  "model.direct": "Direct",
+  "editor.patchAvailable": "Unity {0} is available in this release line."
 }
