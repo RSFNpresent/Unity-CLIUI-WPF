@@ -11,6 +11,7 @@
     <InformationalVersion>1.0.1</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Product>Unity CLIUI</Product>
+    <Company>RSFNpresent</Company>
     <ApplicationIcon>Assets\AppLogo.ico</ApplicationIcon>
     <RepositoryUrl>https://github.com/RSFNpresent/Unity-CLIUI-WPF</RepositoryUrl>
     <Nullable>enable</Nullable>
