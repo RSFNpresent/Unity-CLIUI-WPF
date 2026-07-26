@@ -12,7 +12,7 @@ Download the Windows x64 package from [Releases](https://github.com/RSFNpresent/
 
 Unity CLI is not included. Select **Direct (no CLI)** in **Settings** to enable official package downloads and installation without the CLI. **Auto** only detects an existing CLI and never switches to direct downloads implicitly.
 
-## Version 1.0.1
+## Version 1.0.2
 
 - Install, scan, update, uninstall, and launch Unity editors with or without Unity CLI.
 - Discover editor packages and modules from Unity's official Release API.
