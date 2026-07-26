@@ -19,6 +19,7 @@ Unity CLI is not included. Select **Direct (no CLI)** in **Settings** to enable 
 - Resume up to three package downloads in parallel, verify official integrity metadata, and stage ZIP extraction before committing files.
 - Apply Unity package `destination` and `extractedPathRename` rules with path traversal protection.
 - View and install editor modules and their required nested dependencies.
+- Create minimal Unity projects for an installed editor with compatible Visual Studio and VS Code package versions read from its official metadata.
 - Add, scan, sort, and launch Unity projects with per-project arguments.
 - Manage the Unity Pipeline and Unity AI Assistant packages.
 - Configure Unity MCP for supported AI clients.

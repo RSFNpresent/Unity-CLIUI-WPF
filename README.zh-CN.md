@@ -19,6 +19,7 @@ Unity CLIUI 是一个用于 Windows 的第三方 WPF Unity 管理器。无需安
 - 最多并行断点下载三个包，校验官方完整性信息，并在独立 staging 中安全解压后提交。
 - 按 Unity 清单应用 `destination` 和 `extractedPathRename`，同时防止路径穿越。
 - 查看并安装编辑器模块及其必需的嵌套依赖。
+- 为所选已安装编辑器创建最小 Unity 工程，并从编辑器官方元数据写入兼容的 Visual Studio 与 VS Code 包版本。
 - 添加、扫描、排序和启动 Unity 工程，并保存各工程的启动参数。
 - 管理 Unity Pipeline 和 Unity AI Assistant 包。
 - 为支持的 AI 客户端配置 Unity MCP。

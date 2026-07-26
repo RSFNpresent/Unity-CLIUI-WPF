@@ -2588,6 +2588,44 @@ public partial class MainWindow : Window
             : LocalizationService.Get("project.updated");
     }
 
+    private void CreateProject_Click(object sender, RoutedEventArgs e)
+    {
+        var editors = InstalledEditors
+            .Where(editor => ResolveEditorExecutable(editor.Path) is not null)
+            .ToArray();
+        if (editors.Length == 0)
+        {
+            ShowLocalizedMessage(
+                LocalizationService.Get("message.refreshEditorsFirst"),
+                LocalizationService.Get("dialog.noInstalledEditor.title"),
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            return;
+        }
+
+        var dialog = new CreateProjectWindow(editors) { Owner = this };
+        if (dialog.ShowDialog() != true ||
+            dialog.CreationResult is not { } result ||
+            dialog.SelectedEditor is not { } selectedEditor)
+        {
+            return;
+        }
+
+        AddOrUpdateManagedProject(result.ProjectPath, markOpened: false);
+        SortManagedProjects();
+        SaveManagedProjects();
+        UpdateProjectListStatus();
+        ProjectScanStatusText.Foreground = new SolidColorBrush(Color.FromRgb(16, 124, 16));
+        ProjectScanStatusText.Text = LocalizationService.Format(
+            "project.created",
+            GetProjectName(result.ProjectPath),
+            result.EditorMetadata.EditorVersion);
+
+        var project = RecentProjects.First(item =>
+            string.Equals(item.Path, result.ProjectPath, StringComparison.OrdinalIgnoreCase));
+        LaunchManagedProject(project, selectedEditor);
+    }
+
     private async void OpenManagedProject_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { CommandParameter: RecentProject project } || !IsUnityProject(project.Path))
@@ -2634,11 +2672,23 @@ public partial class MainWindow : Window
             }
         }
 
-        if (editor is null || ResolveEditorExecutable(editor.Path) is not { } executable)
+        if (editor is null)
         {
             ProjectScanStatusText.Text = LocalizationService.Format("project.editorMissing", project.EditorVersion);
             ProjectScanStatusText.Foreground = new SolidColorBrush(Color.FromRgb(196, 43, 28));
             return;
+        }
+
+        LaunchManagedProject(project, editor);
+    }
+
+    private bool LaunchManagedProject(RecentProject project, EditorInstallation editor)
+    {
+        if (ResolveEditorExecutable(editor.Path) is not { } executable)
+        {
+            ProjectScanStatusText.Text = LocalizationService.Format("project.editorMissing", project.EditorVersion);
+            ProjectScanStatusText.Foreground = new SolidColorBrush(Color.FromRgb(196, 43, 28));
+            return false;
         }
 
         var arguments = $"-projectPath {QuoteWindowsArgument(project.Path)}";
@@ -2659,11 +2709,13 @@ public partial class MainWindow : Window
             AddRecentProject(project.Path);
             ProjectScanStatusText.Foreground = new SolidColorBrush(Color.FromRgb(105, 116, 137));
             ProjectScanStatusText.Text = LocalizationService.Format("project.opening", editor.Version, project.Name);
+            return true;
         }
         catch (Exception exception) when (exception is Win32Exception or InvalidOperationException)
         {
             ProjectScanStatusText.Text = LocalizationService.Format("project.launchFailed", exception.Message);
             ProjectScanStatusText.Foreground = new SolidColorBrush(Color.FromRgb(196, 43, 28));
+            return false;
         }
     }
 

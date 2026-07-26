@@ -18,6 +18,8 @@ internal static class Program
         ("Release API parsing", TestReleaseApiParsingAsync),
         ("Only No CLI mode enables direct downloads", TestBackendModePolicyAsync),
         ("First-run language and management choices", TestFirstRunChoicesAsync),
+        ("Minimal Unity project creation", TestMinimalUnityProjectCreationAsync),
+        ("Project creation path safety", TestProjectCreationPathSafetyAsync),
         ("Release API pagination limit", TestReleaseApiPaginationAsync),
         ("Integrity encodings", TestIntegrityEncodingsAsync),
         ("Dependency DAG and version guard", TestDependencyPlannerAsync),
@@ -146,6 +148,126 @@ internal static class Program
             throw new InvalidOperationException("First-run dialog interaction failed.", failure);
         }
         return Task.CompletedTask;
+    }
+
+    private static Task TestMinimalUnityProjectCreationAsync()
+    {
+        var root = CreateTemporaryDirectory();
+        try
+        {
+            var editor2022 = CreateEditorFixture(root, "editor-2022", "2.0.22", "1.2.5");
+            var result2022 = UnityProjectCreator.Create(new UnityProjectCreationRequest(
+                root,
+                "Minimal2022",
+                "2022.3.62f3",
+                editor2022));
+            Equal("2.0.22", result2022.EditorMetadata.VisualStudioPackageVersion);
+            Equal("1.2.5", result2022.EditorMetadata.VisualStudioCodePackageVersion);
+            AssertMinimalProject(result2022.ProjectPath, "2022.3.62f3", "2.0.22", "1.2.5");
+
+            var editor6 = CreateEditorFixture(root, "editor-6", "2.0.26", null);
+            var result6 = UnityProjectCreator.Create(new UnityProjectCreationRequest(
+                root,
+                "Minimal6",
+                "6000.5.2f1",
+                editor6));
+            Equal("2.0.26", result6.EditorMetadata.VisualStudioPackageVersion);
+            Equal("1.2.5", result6.EditorMetadata.VisualStudioCodePackageVersion);
+            AssertMinimalProject(result6.ProjectPath, "6000.5.2f1", "2.0.26", "1.2.5");
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+        return Task.CompletedTask;
+    }
+
+    private static Task TestProjectCreationPathSafetyAsync()
+    {
+        var root = CreateTemporaryDirectory();
+        try
+        {
+            var editor = CreateEditorFixture(root, "editor", "2.0.26", null);
+            var existing = Path.Combine(root, "Existing");
+            Directory.CreateDirectory(existing);
+            var sentinel = Path.Combine(existing, "keep.txt");
+            File.WriteAllText(sentinel, "keep");
+
+            Throws<IOException>(() => UnityProjectCreator.Create(new UnityProjectCreationRequest(
+                root,
+                "Existing",
+                "6000.5.2f1",
+                editor)));
+            True(File.Exists(sentinel));
+            Throws<InvalidDataException>(() => UnityProjectCreator.Create(new UnityProjectCreationRequest(
+                root,
+                "..\\escape",
+                "6000.5.2f1",
+                editor)));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+        return Task.CompletedTask;
+    }
+
+    private static string CreateEditorFixture(
+        string root,
+        string name,
+        string visualStudioVersion,
+        string? visualStudioCodeVersion)
+    {
+        var editorRoot = Path.Combine(root, name);
+        var editorDirectory = Path.Combine(editorRoot, "Editor");
+        var metadataDirectory = Path.Combine(
+            editorDirectory,
+            "Data",
+            "Resources",
+            "PackageManager",
+            "Editor");
+        Directory.CreateDirectory(metadataDirectory);
+        File.Copy(Environment.ProcessPath!, Path.Combine(editorDirectory, "Unity.exe"));
+
+        var vscodePackage = visualStudioCodeVersion is null
+            ? new Dictionary<string, object> { ["deprecated"] = "Fixture" }
+            : new Dictionary<string, object> { ["version"] = visualStudioCodeVersion };
+        var manifest = new
+        {
+            schemaVersion = 4,
+            packages = new Dictionary<string, object>
+            {
+                [UnityProjectCreator.VisualStudioPackageId] = new { version = visualStudioVersion },
+                [UnityProjectCreator.VisualStudioCodePackageId] = vscodePackage
+            }
+        };
+        File.WriteAllText(
+            Path.Combine(metadataDirectory, "manifest.json"),
+            JsonSerializer.Serialize(manifest));
+        return editorRoot;
+    }
+
+    private static void AssertMinimalProject(
+        string projectPath,
+        string editorVersion,
+        string visualStudioVersion,
+        string visualStudioCodeVersion)
+    {
+        var directoryNames = Directory.GetDirectories(projectPath)
+            .Select(Path.GetFileName)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+        Equal("Assets,Packages,ProjectSettings", string.Join(',', directoryNames));
+        Equal(2, Directory.GetFiles(projectPath, "*", SearchOption.AllDirectories).Length);
+
+        using var manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(projectPath, "Packages", "manifest.json")));
+        var dependencies = manifest.RootElement.GetProperty("dependencies");
+        Equal(2, dependencies.EnumerateObject().Count());
+        Equal(visualStudioVersion, dependencies.GetProperty(UnityProjectCreator.VisualStudioPackageId).GetString());
+        Equal(visualStudioCodeVersion, dependencies.GetProperty(UnityProjectCreator.VisualStudioCodePackageId).GetString());
+
+        var projectVersion = File.ReadAllText(Path.Combine(projectPath, "ProjectSettings", "ProjectVersion.txt"));
+        True(projectVersion.StartsWith($"m_EditorVersion: {editorVersion}", StringComparison.Ordinal));
     }
 
     private static async Task TestReleaseApiPaginationAsync()
