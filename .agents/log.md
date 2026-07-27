@@ -40,6 +40,7 @@
 - 动画策略由强制启用改为跟随 Windows 客户端区域动画与菜单动画设置；动画关闭时页面、导航和磁贴立即恢复最终姿态，不残留透明、缩小或偏移状态。
 - `v1.0.3` 发布候选通过 Release 构建（0 警告、0 错误）、14/14 回归、双包单 EXE/禁止文件/版本元数据检查；系统动画关闭环境下两种包均正常启动和立即关闭，“关于”内容可见。
 - `v1.0.3` ZIP SHA-256：framework-dependent `A091D145B86BEA42BEFBEE7220394F3218DEC4348A051BB6F9B9075653A178C7`；self-contained `0E6AE4564FB1BE2DDD48760A547685EBCC940DB90A32402B64ACBD364257E1FD`。
+- 已发布 `v1.0.3`：发布提交 `5077b3e`，annotated tag 与两个 ZIP 已推送；GitHub Release 为非草稿、非预发布，说明为 `animation and about`，远端资产大小和 SHA-256 回查一致。
 - 动画策略测试加入回归入口，测试总数更新为 14。
 - 建立 `.agents` 项目规范目录及分功能 knowledge 文档。
 - Direct 模式的版本详情改为只显示本机已安装模块，不再优先展示历史全量模块缓存。
