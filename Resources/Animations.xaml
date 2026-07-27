@@ -1,0 +1,187 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Shared Windows motion timings. Callers use SystemAnimationPolicy so every
+         transition follows the current Windows animation settings consistently. -->
+    <Duration x:Key="Motion.Duration.Close">0:0:0.18</Duration>
+    <Duration x:Key="Motion.Duration.Fast">0:0:0.20</Duration>
+    <Duration x:Key="Motion.Duration.Normal">0:0:0.28</Duration>
+    <Duration x:Key="Motion.Duration.Slow">0:0:0.36</Duration>
+    <Duration x:Key="Motion.Duration.Acrylic">0:0:0.32</Duration>
+
+    <ExponentialEase x:Key="Motion.EaseOut"
+                     Exponent="6"
+                     EasingMode="EaseOut" />
+    <CubicEase x:Key="Motion.EaseIn"
+               EasingMode="EaseIn" />
+    <QuadraticEase x:Key="Motion.EaseInOut"
+                   EasingMode="EaseInOut" />
+
+    <!-- Apply this style, or an equivalent TranslateTransform, to slide targets. -->
+    <Style x:Key="Motion.TranslateTargetStyle"
+           TargetType="{x:Type FrameworkElement}">
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <TranslateTransform />
+            </Setter.Value>
+        </Setter>
+        <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
+    </Style>
+
+    <!-- Win8/Win10 Start-style entrance: a restrained horizontal reveal. -->
+    <Storyboard x:Key="Motion.StartMenuEnterStoryboard"
+                x:Shared="False"
+                FillBehavior="Stop">
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                         From="0"
+                         To="1"
+                         Duration="{StaticResource Motion.Duration.Normal}"
+                         EasingFunction="{StaticResource Motion.EaseOut}" />
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
+                         From="-44"
+                         To="0"
+                         Duration="{StaticResource Motion.Duration.Slow}"
+                         EasingFunction="{StaticResource Motion.EaseOut}" />
+    </Storyboard>
+
+    <!-- Start items can be begun with a caller-supplied delay for a short stagger. -->
+    <Storyboard x:Key="Motion.StartMenuItemEnterStoryboard"
+                x:Shared="False"
+                FillBehavior="Stop">
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                         From="0"
+                         To="1"
+                         Duration="{StaticResource Motion.Duration.Fast}"
+                         EasingFunction="{StaticResource Motion.EaseOut}" />
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                         From="18"
+                         To="0"
+                         Duration="{StaticResource Motion.Duration.Normal}"
+                         EasingFunction="{StaticResource Motion.EaseOut}" />
+    </Storyboard>
+
+    <Storyboard x:Key="Motion.PageEnterStoryboard"
+                x:Shared="False"
+                FillBehavior="Stop">
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                         From="0"
+                         To="1"
+                         Duration="{StaticResource Motion.Duration.Normal}"
+                         EasingFunction="{StaticResource Motion.EaseOut}" />
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
+                         From="30"
+                         To="0"
+                         Duration="{StaticResource Motion.Duration.Slow}"
+                         EasingFunction="{StaticResource Motion.EaseOut}" />
+    </Storyboard>
+
+    <Storyboard x:Key="Motion.PageExitStoryboard"
+                x:Shared="False"
+                FillBehavior="HoldEnd">
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                         From="1"
+                         To="0"
+                         Duration="{StaticResource Motion.Duration.Close}"
+                         EasingFunction="{StaticResource Motion.EaseIn}" />
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
+                         From="0"
+                         To="-18"
+                         Duration="{StaticResource Motion.Duration.Close}"
+                         EasingFunction="{StaticResource Motion.EaseIn}" />
+    </Storyboard>
+
+    <!-- Animate the acrylic/fallback surface opacity, never the native blur itself. -->
+    <Storyboard x:Key="Motion.AcrylicFadeInStoryboard"
+                x:Shared="False"
+                FillBehavior="Stop">
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                         From="0"
+                         To="1"
+                         Duration="{StaticResource Motion.Duration.Acrylic}"
+                         EasingFunction="{StaticResource Motion.EaseInOut}" />
+    </Storyboard>
+
+    <Storyboard x:Key="Motion.AcrylicFadeOutStoryboard"
+                x:Shared="False"
+                FillBehavior="HoldEnd">
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                         From="1"
+                         To="0"
+                         Duration="{StaticResource Motion.Duration.Normal}"
+                         EasingFunction="{StaticResource Motion.EaseInOut}" />
+    </Storyboard>
+
+    <Storyboard x:Key="Motion.WindowEnterStoryboard"
+                x:Shared="False"
+                FillBehavior="Stop">
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                         From="0"
+                         To="1"
+                         Duration="{StaticResource Motion.Duration.Normal}"
+                         EasingFunction="{StaticResource Motion.EaseOut}" />
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                         From="28"
+                         To="0"
+                         Duration="{StaticResource Motion.Duration.Slow}"
+                         EasingFunction="{StaticResource Motion.EaseOut}" />
+    </Storyboard>
+
+    <Storyboard x:Key="Motion.WindowMinimizeStoryboard"
+                x:Shared="False"
+                FillBehavior="HoldEnd">
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                         From="1"
+                         To="0"
+                         Duration="{StaticResource Motion.Duration.Fast}"
+                         EasingFunction="{StaticResource Motion.EaseIn}" />
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                         From="0"
+                         To="24"
+                         Duration="{StaticResource Motion.Duration.Fast}"
+                         EasingFunction="{StaticResource Motion.EaseIn}" />
+    </Storyboard>
+
+    <Storyboard x:Key="Motion.WindowMaximizeStoryboard"
+                x:Shared="False"
+                FillBehavior="Stop">
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                         From="0.88"
+                         To="1"
+                         Duration="{StaticResource Motion.Duration.Fast}"
+                         EasingFunction="{StaticResource Motion.EaseOut}" />
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                         From="12"
+                         To="0"
+                         Duration="{StaticResource Motion.Duration.Normal}"
+                         EasingFunction="{StaticResource Motion.EaseOut}" />
+    </Storyboard>
+
+    <Storyboard x:Key="Motion.WindowRestoreStoryboard"
+                x:Shared="False"
+                FillBehavior="Stop">
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                         From="0.9"
+                         To="1"
+                         Duration="{StaticResource Motion.Duration.Fast}"
+                         EasingFunction="{StaticResource Motion.EaseOut}" />
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                         From="-10"
+                         To="0"
+                         Duration="{StaticResource Motion.Duration.Normal}"
+                         EasingFunction="{StaticResource Motion.EaseOut}" />
+    </Storyboard>
+
+    <Storyboard x:Key="Motion.WindowCloseStoryboard"
+                x:Shared="False"
+                FillBehavior="HoldEnd">
+        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                         From="1"
+                         To="0"
+                         Duration="{StaticResource Motion.Duration.Close}"
+                         EasingFunction="{StaticResource Motion.EaseIn}" />
+        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                         From="0"
+                         To="12"
+                         Duration="{StaticResource Motion.Duration.Close}"
+                         EasingFunction="{StaticResource Motion.EaseIn}" />
+    </Storyboard>
+</ResourceDictionary>

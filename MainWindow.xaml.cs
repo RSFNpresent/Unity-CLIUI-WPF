@@ -34,6 +34,7 @@ public partial class MainWindow : Window
 
     private readonly UnityCliService _cli = new();
     private readonly DirectUnityService _direct = new();
+    private readonly WindowTransitionController _windowTransitions;
     private readonly bool _requiresFirstRunSetup;
     private readonly Queue<string> _recentOutput = new();
     private readonly Dictionary<string, AvailableModulesCacheEntry> _availableModulesCache =
@@ -51,6 +52,7 @@ public partial class MainWindow : Window
     private bool _firstRunSetupCompleted;
     private ManagementMode _managementMode = ManagementMode.Auto;
     private string _currentPage = "Dashboard";
+    private bool _acrylicAvailable;
 
     public ObservableCollection<EditorInstallation> InstalledEditors { get; } = [];
     public ObservableCollection<EditorInstallation> FilteredInstalledEditors { get; } = [];
@@ -68,6 +70,10 @@ public partial class MainWindow : Window
         LocalizationService.Initialize(LoadManagerLanguage());
         InitializeComponent();
         DataContext = this;
+        _windowTransitions = new WindowTransitionController(
+            this,
+            WindowAnimationRoot,
+            AcrylicTransitionMask);
         var managerSettings = LoadManagerSettings();
         _managementMode = ParseManagementMode(managerSettings.ManagementMode);
         _isInitializingManagerSettings = true;
@@ -98,13 +104,21 @@ public partial class MainWindow : Window
         };
         SourceInitialized += (_, _) =>
         {
-            if (!AcrylicWindow.Enable(this))
+            _acrylicAvailable = AcrylicWindow.Enable(this);
+            _windowTransitions.SetKnownAcrylicState(_acrylicAvailable);
+            if (!_acrylicAvailable)
             {
                 var fallback = new SolidColorBrush(Color.FromRgb(243, 243, 243));
                 TitleBarSurface.Background = fallback;
                 NavigationSurface.Background = fallback;
             }
         };
+        Activated += Window_Activated;
+        Deactivated += Window_Deactivated;
+        UiMotionService.PrepareStartMenuEntrance(
+            [DashboardNav, ProjectsNav, EditorsNav, OutputNav, SettingsNav, UnityAccountButton]);
+        UiMotionService.PreparePageEntrance(GetPageElement(_currentPage));
+        ContentRendered += MainWindow_ContentRendered;
         Loaded += MainWindow_Loaded;
     }
 
@@ -112,7 +126,7 @@ public partial class MainWindow : Window
     {
         if (e.ClickCount == 2)
         {
-            ToggleMaximize();
+            _windowTransitions.RequestToggleMaximize();
             return;
         }
 
@@ -122,11 +136,11 @@ public partial class MainWindow : Window
         }
     }
 
-    private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+    private void Minimize_Click(object sender, RoutedEventArgs e) => _windowTransitions.RequestMinimize();
 
-    private void Maximize_Click(object sender, RoutedEventArgs e) => ToggleMaximize();
+    private void Maximize_Click(object sender, RoutedEventArgs e) => _windowTransitions.RequestToggleMaximize();
 
-    private void Close_Click(object sender, RoutedEventArgs e) => Close();
+    private void Close_Click(object sender, RoutedEventArgs e) => _windowTransitions.RequestClose();
 
     private void Window_StateChanged(object? sender, EventArgs e)
     {
@@ -142,8 +156,21 @@ public partial class MainWindow : Window
             : LocalizationService.Get("common.maximize");
     }
 
-    private void ToggleMaximize() =>
-        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+    private void Window_Activated(object? sender, EventArgs e) => SetAcrylicEnabled(enabled: true);
+
+    private void Window_Deactivated(object? sender, EventArgs e) => SetAcrylicEnabled(enabled: false);
+
+    private void SetAcrylicEnabled(bool enabled)
+    {
+        if (!_acrylicAvailable)
+        {
+            return;
+        }
+
+        _windowTransitions.RequestSetAcrylicEnabled(
+            enabled,
+            value => AcrylicWindow.SetEnabled(this, value));
+    }
 
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
@@ -168,6 +195,14 @@ public partial class MainWindow : Window
         {
             ShowPage("Settings");
         }
+    }
+
+    private void MainWindow_ContentRendered(object? sender, EventArgs e)
+    {
+        ContentRendered -= MainWindow_ContentRendered;
+        UiMotionService.PlayStartMenuEntrance(
+            [DashboardNav, ProjectsNav, EditorsNav, OutputNav, SettingsNav, UnityAccountButton]);
+        UiMotionService.PlayPreparedPageEntrance(GetPageElement(_currentPage));
     }
 
     private bool CompleteFirstRunSetup()
@@ -1128,6 +1163,7 @@ public partial class MainWindow : Window
             page = "Editors";
         }
 
+        var pageChanged = !string.Equals(_currentPage, page, StringComparison.Ordinal);
         _currentPage = page;
 
         if (page == "Editors")
@@ -1167,7 +1203,22 @@ public partial class MainWindow : Window
         };
 
         PageTitleText.Text = titles[page];
+
+        if (pageChanged)
+        {
+            UiMotionService.PlayPageEntrance(GetPageElement(page));
+        }
     }
+
+    private FrameworkElement GetPageElement(string page) => page switch
+    {
+        "Dashboard" => DashboardPage,
+        "Editors" => EditorsPage,
+        "Projects" => ProjectsPage,
+        "Output" => OutputPage,
+        "Settings" => SettingsPage,
+        _ => DashboardPage
+    };
 
     private async void RefreshEditors_Click(object sender, RoutedEventArgs e) => await RefreshEditorsAsync();
 
@@ -1242,31 +1293,51 @@ public partial class MainWindow : Window
 
     private void ShowCachedEditorModules(EditorInstallation editor)
     {
+        if (EditorModuleDisplayPolicy.UsesInstalledModulesOnly(
+                _managementMode,
+                remoteCatalogAvailable: true))
+        {
+            ShowInstalledEditorModules(editor);
+            return;
+        }
+
         if (TryShowAvailableModulesCache(editor))
         {
             return;
         }
 
-        ClearModuleCollections();
+        ShowInstalledEditorModules(editor);
+    }
 
-        foreach (var moduleName in SplitRegisteredModules(editor.Modules))
+    private void ShowInstalledEditorModules(EditorInstallation editor, bool remoteUnavailable = false)
+    {
+        var installedIds = InstalledModuleCatalog.Read(
+            ResolveEditorRoot(editor.Path),
+            SplitRegisteredModules(editor.Modules));
+        _availableModulesCache.TryGetValue(editor.Version, out var cacheEntry);
+
+        var modules = installedIds.Select(id =>
         {
-            var module = new UnityModuleInfo
+            var cached = cacheEntry?.Modules.FirstOrDefault(module =>
+                ModuleNamesMatch(id, module.Name, module.Id));
+            return new UnityModuleInfo
             {
-                Id = moduleName,
-                Name = moduleName,
+                Id = cached?.Id ?? id,
+                Name = cached?.Name ?? id,
+                Size = cached?.Size ?? string.Empty,
                 Installed = true
             };
-            AvailableModules.Add(module);
-            InstalledModules.Add(module);
-        }
+        });
 
-        InstalledModulesEmptyText.Visibility = InstalledModules.Count == 0
-            ? Visibility.Visible
-            : Visibility.Collapsed;
-        ModuleListStatusText.Text = InstalledModules.Count == 0
-            ? LocalizationService.Format("editor.cache.noModules", editor.Version)
-            : LocalizationService.Format("editor.cache.modules", editor.Version, InstalledModules.Count);
+        PopulateModuleCollections(editor.Version, modules, string.Join(',', installedIds));
+        UpdateModuleStatus(editor.Version, fromCache: false);
+        if (remoteUnavailable)
+        {
+            ModuleListStatusText.Text = LocalizationService.Format(
+                "module.remoteUnavailableInstalledOnly",
+                editor.Version,
+                InstalledModules.Count);
+        }
     }
 
     private bool TryShowAvailableModulesCache(EditorInstallation editor)
@@ -2218,11 +2289,7 @@ public partial class MainWindow : Window
                 trackTask: false);
             if (directModules is null)
             {
-                if (TryShowAvailableModulesCache(selectedEditor))
-                {
-                    return;
-                }
-                ModuleListStatusText.Text = LocalizationService.Get("module.loadFailed");
+                ShowInstalledEditorModules(selectedEditor, remoteUnavailable: true);
                 return;
             }
             PopulateModuleCollections(
@@ -2247,8 +2314,12 @@ public partial class MainWindow : Window
 
         if (result?.ExitCode != 0)
         {
-            if (selectedEditor is not null && TryShowAvailableModulesCache(selectedEditor))
+            if (selectedEditor is not null &&
+                EditorModuleDisplayPolicy.UsesInstalledModulesOnly(
+                    _managementMode,
+                    remoteCatalogAvailable: false))
             {
+                ShowInstalledEditorModules(selectedEditor, remoteUnavailable: true);
                 return;
             }
 

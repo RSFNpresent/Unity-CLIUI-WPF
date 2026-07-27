@@ -12,13 +12,15 @@ Unity CLIUI 是一个用于 Windows 的第三方 WPF Unity 管理器。无需安
 
 发布包不包含 Unity CLI。在“设置”中明确选择“直连（无 CLI）”后，才会启用官方软件包的下载与安装。“自动”模式只检测已有 CLI，不会隐式切换到直连下载。
 
-## 1.0.2 版本
+## 1.0.3 版本
 
 - 在有无 Unity CLI 的环境中安装、扫描、更新、卸载和启动 Unity 编辑器。
 - 从 Unity 官方 Release API 获取编辑器与模块清单。
 - 最多并行断点下载三个包，校验官方完整性信息，并在独立 staging 中安全解压后提交。
 - 按 Unity 清单应用 `destination` 和 `extractedPathRename`，同时防止路径穿越。
 - 查看并安装编辑器模块及其必需的嵌套依赖。
+- Direct 模式在本地读取已安装模块；Unity 服务不可用时回退为仅显示已安装模块。
+- 为导航、亚克力状态和窗口生命周期提供跟随 Windows 设置的 Win8/Win10 风格动画，并在“关于”区域显示版本和仓库链接。
 - 为所选已安装编辑器创建最小 Unity 工程，并从编辑器官方元数据写入兼容的 Visual Studio 与 VS Code 包版本。
 - 添加、扫描、排序和启动 Unity 工程，并保存各工程的启动参数。
 - 管理 Unity Pipeline 和 Unity AI Assistant 包。

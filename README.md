@@ -12,13 +12,15 @@ Download the Windows x64 package from [Releases](https://github.com/RSFNpresent/
 
 Unity CLI is not included. Select **Direct (no CLI)** in **Settings** to enable official package downloads and installation without the CLI. **Auto** only detects an existing CLI and never switches to direct downloads implicitly.
 
-## Version 1.0.2
+## Version 1.0.3
 
 - Install, scan, update, uninstall, and launch Unity editors with or without Unity CLI.
 - Discover editor packages and modules from Unity's official Release API.
 - Resume up to three package downloads in parallel, verify official integrity metadata, and stage ZIP extraction before committing files.
 - Apply Unity package `destination` and `extractedPathRename` rules with path traversal protection.
 - View and install editor modules and their required nested dependencies.
+- Read installed modules locally in Direct mode and fall back to the installed-only view when Unity services are unavailable.
+- Use Win8/Win10-inspired transitions that follow Windows animation settings, with an About panel showing the version and repository link.
 - Create minimal Unity projects for an installed editor with compatible Visual Studio and VS Code package versions read from its official metadata.
 - Add, scan, sort, and launch Unity projects with per-project arguments.
 - Manage the Unity Pipeline and Unity AI Assistant packages.

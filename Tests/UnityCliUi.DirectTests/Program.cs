@@ -16,7 +16,8 @@ internal static class Program
     private static readonly List<(string Name, Func<Task> Test)> Tests =
     [
         ("Release API parsing", TestReleaseApiParsingAsync),
-        ("Only No CLI mode enables direct downloads", TestBackendModePolicyAsync),
+        ("Management mode and module fallback policies", ManagementModePolicyTests.RunAsync),
+        ("System animation policy", SystemAnimationPolicyTests.RunAsync),
         ("First-run language and management choices", TestFirstRunChoicesAsync),
         ("Minimal Unity project creation", TestMinimalUnityProjectCreationAsync),
         ("Project creation path safety", TestProjectCreationPathSafetyAsync),
@@ -101,14 +102,6 @@ internal static class Program
         Equal("eb73d3b415a1", response?.Results.Single().ShortRevision);
         var ndk = response?.Results.Single().GetWindowsX64Download()?.Modules.Single().SubModules.Single();
         Equal("{UNITY_PATH}/Editor/Data/PlaybackEngines/AndroidPlayer/NDK", ndk?.ExtractedPathRename?.To);
-        return Task.CompletedTask;
-    }
-
-    private static Task TestBackendModePolicyAsync()
-    {
-        True(!BackendModePolicy.UsesDirectDownloads(ManagementMode.Auto));
-        True(BackendModePolicy.UsesDirectDownloads(ManagementMode.Direct));
-        True(!BackendModePolicy.UsesDirectDownloads(ManagementMode.UnityCli));
         return Task.CompletedTask;
     }
 

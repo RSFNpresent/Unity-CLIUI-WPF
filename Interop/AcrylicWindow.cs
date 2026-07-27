@@ -20,31 +20,10 @@ internal static class AcrylicWindow
             return false;
         }
 
-        var enabled = Apply(window, isActive: true);
-        if (enabled)
-        {
-            window.Activated += Window_Activated;
-            window.Deactivated += Window_Deactivated;
-        }
-
-        return enabled;
+        return SetEnabled(window, enabled: true);
     }
 
-    private static void Window_Activated(object? sender, EventArgs e)
-    {
-        if (sender is Window window)
-        {
-            Apply(window, isActive: true);
-        }
-    }
-
-    private static void Window_Deactivated(object? sender, EventArgs e)
-    {
-        if (sender is Window window)
-        {
-            Apply(window, isActive: false);
-        }
-    }
+    public static bool SetEnabled(Window window, bool enabled) => Apply(window, enabled);
 
     private static bool Apply(Window window, bool isActive)
     {

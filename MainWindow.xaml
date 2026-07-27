@@ -4,6 +4,8 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        xmlns:controls="clr-namespace:unity_cli_ui.Controls"
+        xmlns:services="clr-namespace:unity_cli_ui.Services"
         mc:Ignorable="d"
         Title="unityCLI-UI"
         Icon="Assets/AppLogo.ico"
@@ -246,13 +248,21 @@
                                       MinWidth="{TemplateBinding ActualWidth}"
                                       MaxHeight="{TemplateBinding MaxDropDownHeight}"
                                       Margin="0,1,0,0"
+                                      RenderTransformOrigin="0.5,0"
                                       SnapsToDevicePixels="True">
+                                    <Grid.RenderTransform>
+                                        <TransformGroup>
+                                            <ScaleTransform />
+                                            <TranslateTransform />
+                                        </TransformGroup>
+                                    </Grid.RenderTransform>
                                     <Border x:Name="DropDownBorder"
                                             Background="White"
                                             BorderBrush="#8A8886"
                                             BorderThickness="1">
                                         <ScrollViewer Margin="0,2"
-                                                      CanContentScroll="True"
+                                                      CanContentScroll="False"
+                                                      services:SmoothScrollBehavior.IsEnabled="True"
                                                       SnapsToDevicePixels="True">
                                             <StackPanel IsItemsHost="True"
                                                         KeyboardNavigation.DirectionalNavigation="Contained" />
@@ -272,6 +282,36 @@
                             <Trigger Property="IsDropDownOpen" Value="True">
                                 <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
                                 <Setter TargetName="ArrowSurface" Property="Background" Value="#E5E5E5" />
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard HandoffBehavior="SnapshotAndReplace">
+                                        <Storyboard FillBehavior="Stop">
+                                            <DoubleAnimation Storyboard.TargetName="DropDown"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             From="0"
+                                                             To="1"
+                                                             Duration="0:0:0.24"
+                                                             EasingFunction="{StaticResource Motion.EaseOut}" />
+                                            <DoubleAnimation Storyboard.TargetName="DropDown"
+                                                             Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                                             From="0.94"
+                                                             To="1"
+                                                             Duration="0:0:0.26"
+                                                             EasingFunction="{StaticResource Motion.EaseOut}" />
+                                            <DoubleAnimation Storyboard.TargetName="DropDown"
+                                                             Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                                             From="0.76"
+                                                             To="1"
+                                                             Duration="0:0:0.28"
+                                                             EasingFunction="{StaticResource Motion.EaseOut}" />
+                                            <DoubleAnimation Storyboard.TargetName="DropDown"
+                                                             Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.Y)"
+                                                             From="-18"
+                                                             To="0"
+                                                             Duration="0:0:0.28"
+                                                             EasingFunction="{StaticResource Motion.EaseOut}" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
                             </Trigger>
                             <Trigger Property="HasItems" Value="False">
                                 <Setter TargetName="DropDownBorder" Property="MinHeight" Value="34" />
@@ -481,15 +521,34 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Grid>
+                        <Grid ClipToBounds="True">
                             <Border x:Name="NavBackground"
                                     Background="{TemplateBinding Background}"
+                                    CornerRadius="0" />
+                            <Border x:Name="SelectionHighlight"
+                                    Background="{StaticResource AccentSoftBrush}"
                                     CornerRadius="0"
-                                    Padding="{TemplateBinding Padding}">
-                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center" />
+                                    Opacity="0"
+                                    IsHitTestVisible="False">
+                                <Border.RenderTransform>
+                                    <TranslateTransform />
+                                </Border.RenderTransform>
                             </Border>
-                            <Border x:Name="ActiveLine" Width="3" Height="42" Background="{StaticResource AccentBrush}"
-                                    CornerRadius="0" HorizontalAlignment="Right" Visibility="Collapsed" />
+                            <ContentPresenter Margin="{TemplateBinding Padding}"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="Center" />
+                            <Border x:Name="ActiveLine"
+                                    Width="3"
+                                    Height="42"
+                                    Background="{StaticResource AccentBrush}"
+                                    CornerRadius="0"
+                                    HorizontalAlignment="Right"
+                                    Opacity="0"
+                                    IsHitTestVisible="False">
+                                <Border.RenderTransform>
+                                    <TranslateTransform />
+                                </Border.RenderTransform>
+                            </Border>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -497,9 +556,69 @@
                                 <Setter Property="Foreground" Value="#44516A" />
                             </Trigger>
                             <Trigger Property="Tag" Value="Selected">
-                                <Setter TargetName="NavBackground" Property="Background" Value="{StaticResource AccentSoftBrush}" />
-                                <Setter TargetName="ActiveLine" Property="Visibility" Value="Visible" />
+                                <Setter TargetName="SelectionHighlight" Property="Opacity" Value="1" />
+                                <Setter TargetName="ActiveLine" Property="Opacity" Value="1" />
                                 <Setter Property="Foreground" Value="#005A9E" />
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard HandoffBehavior="SnapshotAndReplace">
+                                        <Storyboard FillBehavior="HoldEnd">
+                                            <DoubleAnimation Storyboard.TargetName="SelectionHighlight"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             From="0"
+                                                             To="1"
+                                                             Duration="0:0:0.30"
+                                                             EasingFunction="{StaticResource Motion.EaseOut}" />
+                                            <DoubleAnimation Storyboard.TargetName="SelectionHighlight"
+                                                             Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
+                                                             From="18"
+                                                             To="0"
+                                                             Duration="0:0:0.38"
+                                                             EasingFunction="{StaticResource Motion.EaseOut}" />
+                                            <DoubleAnimation Storyboard.TargetName="ActiveLine"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             From="0"
+                                                             To="1"
+                                                             Duration="0:0:0.22"
+                                                             EasingFunction="{StaticResource Motion.EaseOut}" />
+                                            <DoubleAnimation Storyboard.TargetName="ActiveLine"
+                                                             Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
+                                                             From="8"
+                                                             To="0"
+                                                             Duration="0:0:0.32"
+                                                             EasingFunction="{StaticResource Motion.EaseOut}" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard HandoffBehavior="SnapshotAndReplace">
+                                        <Storyboard FillBehavior="Stop">
+                                            <DoubleAnimation Storyboard.TargetName="SelectionHighlight"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             From="1"
+                                                             To="0"
+                                                             Duration="0:0:0.18"
+                                                             EasingFunction="{StaticResource Motion.EaseIn}" />
+                                            <DoubleAnimation Storyboard.TargetName="SelectionHighlight"
+                                                             Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
+                                                             From="0"
+                                                             To="-12"
+                                                             Duration="0:0:0.22"
+                                                             EasingFunction="{StaticResource Motion.EaseIn}" />
+                                            <DoubleAnimation Storyboard.TargetName="ActiveLine"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             From="1"
+                                                             To="0"
+                                                             Duration="0:0:0.14"
+                                                             EasingFunction="{StaticResource Motion.EaseIn}" />
+                                            <DoubleAnimation Storyboard.TargetName="ActiveLine"
+                                                             Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
+                                                             From="0"
+                                                             To="-6"
+                                                             Duration="0:0:0.18"
+                                                             EasingFunction="{StaticResource Motion.EaseIn}" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -547,6 +666,10 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+        </Style>
+
+        <Style TargetType="ScrollViewer">
+            <Setter Property="services:SmoothScrollBehavior.IsEnabled" Value="True" />
         </Style>
 
         <Style TargetType="ListBox">
@@ -689,7 +812,10 @@
         </Style>
     </Window.Resources>
 
-    <Border BorderBrush="#D9DEE8" BorderThickness="1" Background="Transparent">
+    <Border x:Name="WindowAnimationRoot"
+            BorderBrush="#D9DEE8"
+            BorderThickness="1"
+            Background="Transparent">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="46" />
@@ -703,6 +829,7 @@
             <!-- Acrylic title frame -->
             <Border x:Name="TitleBarSurface"
                     Grid.Row="0" Grid.ColumnSpan="2"
+                    Panel.ZIndex="2"
                     Background="#18FFFFFF"
                     BorderBrush="#E4E8EF"
                     BorderThickness="0,0,0,1"
@@ -738,6 +865,7 @@
             <!-- Acrylic navigation rail -->
             <Border x:Name="NavigationSurface"
                     Grid.Row="1" Grid.Column="0"
+                    Panel.ZIndex="2"
                     Background="#18FFFFFF"
                     BorderBrush="#E2E6ED"
                     BorderThickness="0,0,1,0">
@@ -1921,12 +2049,13 @@
                                 </StackPanel>
                             </Border>
                             <TextBlock Text="{DynamicResource Loc.S9B9D640888191D76}" Style="{StaticResource SectionTitle}" Margin="0,24,0,12" />
-                            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                                <Button Grid.Column="0" Content="{DynamicResource Loc.S5ACAB75FC7AFD655}" Style="{StaticResource QuickActionButton}" Height="76" Click="OpenDocs_Click" />
-                                <Button Grid.Column="2" Content="{DynamicResource Loc.SB6E77060DB53ADE4}" Style="{StaticResource QuickActionButton}" Height="76" Click="OpenUsageDocs_Click" />
-                                <Button Grid.Column="4" Content="{DynamicResource Loc.S8A756DC1A7F03A44}" Style="{StaticResource QuickActionButton}" Height="76" Click="OpenReferenceDocs_Click" />
-                            </Grid>
-                        </StackPanel>
+                             <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                 <Button Grid.Column="0" Content="{DynamicResource Loc.S5ACAB75FC7AFD655}" Style="{StaticResource QuickActionButton}" Height="76" Click="OpenDocs_Click" />
+                                 <Button Grid.Column="2" Content="{DynamicResource Loc.SB6E77060DB53ADE4}" Style="{StaticResource QuickActionButton}" Height="76" Click="OpenUsageDocs_Click" />
+                                 <Button Grid.Column="4" Content="{DynamicResource Loc.S8A756DC1A7F03A44}" Style="{StaticResource QuickActionButton}" Height="76" Click="OpenReferenceDocs_Click" />
+                             </Grid>
+                            <controls:AboutPanel />
+                         </StackPanel>
                     </ScrollViewer>
 
                     <Grid x:Name="WorkspaceBusyOverlay"
@@ -1948,6 +2077,41 @@
                     </Grid>
                 </Grid>
             </Border>
+
+            <Grid x:Name="AcrylicTransitionMask"
+                    Grid.RowSpan="2"
+                    Grid.ColumnSpan="2"
+                    Panel.ZIndex="1"
+                    Opacity="0"
+                    Visibility="Collapsed"
+                    IsHitTestVisible="False">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="46" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="240" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Grid.Row="0" Grid.ColumnSpan="2">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                            <GradientStop Color="#E4EFF7" Offset="0" />
+                            <GradientStop Color="#F0F3F5" Offset="0.58" />
+                            <GradientStop Color="#F2F2F2" Offset="1" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                </Border>
+                <Border Grid.Row="1" Grid.Column="0">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                            <GradientStop Color="#E4EFF7" Offset="0" />
+                            <GradientStop Color="#F0F3F5" Offset="0.58" />
+                            <GradientStop Color="#F2F2F2" Offset="1" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                </Border>
+            </Grid>
 
         </Grid>
     </Border>
