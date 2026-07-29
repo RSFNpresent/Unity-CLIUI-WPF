@@ -1901,7 +1901,7 @@
                                         <ComboBoxItem Content="{DynamicResource settings.mode.direct}" Tag="Direct" />
                                         <ComboBoxItem Content="{DynamicResource settings.mode.cli}" Tag="UnityCli" />
                                     </ComboBox>
-                                    <StackPanel Grid.Row="2" Grid.ColumnSpan="2">
+                                    <StackPanel x:Name="DirectDownloadSettingsPanel" Grid.Row="2" Grid.ColumnSpan="2">
                                         <TextBlock Text="{DynamicResource settings.editorInstallRoot}" Style="{StaticResource FieldLabel}" />
                                         <Grid>
                                             <Grid.ColumnDefinitions>
@@ -1915,6 +1915,26 @@
                                                     Style="{StaticResource SecondaryButton}"
                                                     Click="BrowseEditorInstallRoot_Click" />
                                         </Grid>
+                                        <TextBlock Text="{DynamicResource settings.packageCacheDirectory}"
+                                                   Style="{StaticResource FieldLabel}"
+                                                   Margin="0,12,0,6" />
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="8" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox x:Name="PackageCacheDirectoryText" />
+                                            <Button Grid.Column="2"
+                                                    Content="{DynamicResource Loc.SE5FE24CA742F83D9}"
+                                                    Style="{StaticResource SecondaryButton}"
+                                                    Click="BrowsePackageCacheDirectory_Click" />
+                                        </Grid>
+                                        <CheckBox x:Name="KeepPackageCacheCheck"
+                                                  Content="{DynamicResource settings.keepPackageCache}"
+                                                  Margin="0,12,0,0"
+                                                  Checked="KeepPackageCacheCheck_Changed"
+                                                  Unchecked="KeepPackageCacheCheck_Changed" />
                                     </StackPanel>
                                 </Grid>
                             </Border>

@@ -2,9 +2,10 @@
 
 ## 产品行为
 
-- 禁止让 `Auto` 模式触发手动下载。直接下载的唯一判定保持为 `ManagementMode.Direct`。
+- 禁止让 `Auto` 模式触发手动下载。`UnityCli` 模式只允许在编辑器安装提示中由用户明确选择一次手动安装。
 - 禁止让 Direct 版本详情从全量可用模块缓存恢复数据；应只显示本机已安装模块。
 - 远程目录失败时禁止用旧全量缓存伪装成功；改为本地扫描与已登记模块，并显示离线回退状态。
+- Unity Release API 的 `installedSize.value` 和 `downloadSize.value` 不保证始终是 JSON Int64；模型解析必须接受字符串数字和 `.0` 数字。
 - 禁止把 Unity CLI 放入安装包；本地 `unitycli-*.exe` 仅供开发检测，已由项目文件和 `.gitignore` 排除。
 - 禁止接收或打包 `System.Security.Cryptography.Xml.dll`。下载计划、清单字段和 ZIP 条目都要检查。
 - 禁止硬编码不同 Unity 编辑器的 Visual Studio 包版本；必须读取目标编辑器官方 Package Manager 清单。
@@ -39,6 +40,7 @@
 ## 构建与发布
 
 - 不要并行运行主 WPF 项目的 `dotnet build` 与引用它的 DirectTests；两者会争用 `obj` 下的 WPF 临时项目，偶发产生临时项目 `CS5001`。应顺序执行构建和回归测试。
+- 如果 `dotnet build` 卡在还原阶段，先单独执行 `dotnet restore`。还原成功后用 `dotnet build --no-restore` 验证编译，避免重复卡在 NuGet 网络重试。
 - self-contained 不等于必须散布数百个文件；当前配置启用单文件和压缩，发布目标会拒绝额外文件。
 - 发布前检查两个 ZIP 都只有 `Unity-CLIUI.exe`，并再次排除 Unity CLI 与测试 DLL。
 - 已存在的 GitHub 标签不得改写。发布前先检查 Releases 和 tags，再递增版本号。

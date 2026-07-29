@@ -81,6 +81,10 @@ public partial class MainWindow : Window
         EditorInstallRootText.Text = string.IsNullOrWhiteSpace(managerSettings.EditorInstallRoot)
             ? DirectInstallPaths.DefaultEditorRoot
             : managerSettings.EditorInstallRoot;
+        PackageCacheDirectoryText.Text = string.IsNullOrWhiteSpace(managerSettings.PackageCacheDirectory)
+            ? DirectInstallPaths.Packages
+            : managerSettings.PackageCacheDirectory;
+        KeepPackageCacheCheck.IsChecked = managerSettings.KeepPackageCache;
         CliScriptInstallPathText.Text = string.IsNullOrWhiteSpace(managerSettings.CliInstallDirectory)
             ? GetDefaultCliInstallDirectory()
             : managerSettings.CliInstallDirectory;
@@ -1110,6 +1114,9 @@ public partial class MainWindow : Window
         CliSettingsCard.Visibility = _managementMode == ManagementMode.UnityCli
             ? Visibility.Visible
             : Visibility.Collapsed;
+        DirectDownloadSettingsPanel.Visibility = UseDirectBackend
+            ? Visibility.Visible
+            : Visibility.Collapsed;
         if (UseDirectBackend)
         {
             SetDirectReady();
@@ -1118,20 +1125,60 @@ public partial class MainWindow : Window
 
     private void BrowseEditorInstallRoot_Click(object sender, RoutedEventArgs e)
     {
+        if (!TrySelectEditorInstallRoot(
+                LocalizationService.Get("dialog.selectEditorInstallRoot"),
+                out var installRoot))
+        {
+            return;
+        }
+        EditorInstallRootText.Text = installRoot;
+        SaveManagerSettings();
+    }
+
+    private bool TrySelectEditorInstallRoot(string title, out string installRoot)
+    {
         var dialog = new OpenFolderDialog
         {
-            Title = LocalizationService.Get("dialog.selectEditorInstallRoot"),
+            Title = title,
             Multiselect = false,
             InitialDirectory = Directory.Exists(EditorInstallRootText.Text)
                 ? EditorInstallRootText.Text
                 : DirectInstallPaths.DefaultEditorRoot
         };
+        if (dialog.ShowDialog(this) == true)
+        {
+            installRoot = dialog.FolderName;
+            return true;
+        }
+
+        installRoot = string.Empty;
+        return false;
+    }
+
+    private void BrowsePackageCacheDirectory_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFolderDialog
+        {
+            Title = LocalizationService.Get("dialog.selectPackageCacheDirectory"),
+            Multiselect = false,
+            InitialDirectory = Directory.Exists(PackageCacheDirectoryText.Text)
+                ? PackageCacheDirectoryText.Text
+                : DirectInstallPaths.Packages
+        };
         if (dialog.ShowDialog(this) != true)
         {
             return;
         }
-        EditorInstallRootText.Text = dialog.FolderName;
+        PackageCacheDirectoryText.Text = dialog.FolderName;
         SaveManagerSettings();
+    }
+
+    private void KeepPackageCacheCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_isInitializingManagerSettings)
+        {
+            SaveManagerSettings();
+        }
     }
 
     private void LocalizationService_LanguageChanged(object? sender, EventArgs e)
@@ -1929,41 +1976,55 @@ public partial class MainWindow : Window
     {
         var modules = SplitValues(InstallModulesText.Text);
         var dryRun = InstallDryRunCheck.IsChecked == true;
-        var moduleSummary = modules.Count > 0
-            ? LocalizationService.Format("confirm.editor.modules", string.Join(", ", modules))
-            : string.Empty;
-        var confirmation = LocalizationService.Format(
-            dryRun ? "confirm.editor.preview" : "confirm.editor.install",
-            version,
-            moduleSummary);
-        if (!Confirm(confirmation))
+        var acceptEula = InstallAcceptEulaCheck.IsChecked == true;
+        var installRoot = EditorInstallRootText.Text.Trim();
+
+        while (true)
         {
-            return false;
+            var confirmation = new InstallEditorConfirmationWindow(
+                version,
+                GetInstallDirectoryConfirmationText(installRoot),
+                modules,
+                dryRun)
+            {
+                Owner = this
+            };
+            if (confirmation.ShowDialog() != true ||
+                confirmation.Choice == InstallEditorConfirmationChoice.Cancel)
+            {
+                return false;
+            }
+
+            if (confirmation.Choice == InstallEditorConfirmationChoice.Confirm)
+            {
+                break;
+            }
+
+            if (UseDirectBackend)
+            {
+                if (!TrySelectEditorInstallRoot(
+                        LocalizationService.Get("dialog.selectEditorInstallRoot"),
+                        out installRoot))
+                {
+                    continue;
+                }
+
+                EditorInstallRootText.Text = installRoot;
+                SaveManagerSettings();
+                continue;
+            }
+
+            var cliChoiceResult = await TryHandleCliEditorInstallChoiceAsync(
+                version,
+                modules,
+                dryRun,
+                acceptEula);
+            return cliChoiceResult ?? false;
         }
 
         if (UseDirectBackend)
         {
-            var taskName = LocalizationService.Format(
-                dryRun ? "task.editor.preview" : "task.editor.install",
-                version);
-            var directResult = await ExecuteDirectAsync<DirectInstallResult>(
-                taskName,
-                [version, EditorInstallRootText.Text.Trim(), .. modules],
-                (cancellationToken, progress) => _direct.InstallEditorAsync(
-                    new DirectInstallRequest(
-                        version,
-                        EditorInstallRootText.Text.Trim(),
-                        modules,
-                        dryRun,
-                        InstallAcceptEulaCheck.IsChecked == true),
-                    progress,
-                    cancellationToken),
-                trackTask: !dryRun);
-            if (directResult is not null && !dryRun)
-            {
-                await RefreshEditorsAsync();
-            }
-            return directResult is not null;
+            return await InstallEditorWithDirectAsync(version, modules, dryRun, acceptEula, installRoot);
         }
 
         var arguments = new List<string> { "--non-interactive", "install", version, "-y" };
@@ -1976,7 +2037,7 @@ public partial class MainWindow : Window
         {
             arguments.Add("--dry-run");
         }
-        if (InstallAcceptEulaCheck.IsChecked == true)
+        if (acceptEula)
         {
             arguments.Add("--accept-eula");
         }
@@ -1992,6 +2053,93 @@ public partial class MainWindow : Window
             await RefreshEditorsAsync();
         }
         return result?.ExitCode == 0;
+    }
+
+    private string GetInstallDirectoryConfirmationText(string installRoot)
+    {
+        if (!UseDirectBackend)
+        {
+            return LocalizationService.Get("dialog.installConfirm.cliManagedDirectory");
+        }
+
+        return string.IsNullOrWhiteSpace(installRoot)
+            ? DirectInstallPaths.DefaultEditorRoot
+            : installRoot;
+    }
+
+    private async Task<bool?> TryHandleCliEditorInstallChoiceAsync(
+        string version,
+        IReadOnlyList<string> modules,
+        bool dryRun,
+        bool acceptEula)
+    {
+        if (_managementMode != ManagementMode.UnityCli)
+        {
+            return null;
+        }
+
+        var dialog = new CliInstallChoiceWindow
+        {
+            Owner = this
+        };
+        if (dialog.ShowDialog() != true)
+        {
+            return false;
+        }
+
+        if (dialog.Choice == CliInstallChoice.SwitchToDirect)
+        {
+            _isInitializingManagerSettings = true;
+            _managementMode = ManagementMode.Direct;
+            ManagementModeCombo.SelectedValue = _managementMode.ToString();
+            _isInitializingManagerSettings = false;
+            SaveManagerSettings();
+            UpdateManagementModeUi();
+            ShowPage("Settings");
+            return false;
+        }
+
+        if (dialog.Choice == CliInstallChoice.InstallOnceWithDirect &&
+            TrySelectEditorInstallRoot(
+                LocalizationService.Get("dialog.selectManualEditorInstallRoot"),
+                out var installRoot))
+        {
+            return await InstallEditorWithDirectAsync(version, modules, dryRun, acceptEula, installRoot);
+        }
+
+        return false;
+    }
+
+    private async Task<bool> InstallEditorWithDirectAsync(
+        string version,
+        IReadOnlyList<string> modules,
+        bool dryRun,
+        bool acceptEula,
+        string installRoot)
+    {
+        var taskName = LocalizationService.Format(
+            dryRun ? "task.editor.preview" : "task.editor.install",
+            version);
+        var directResult = await ExecuteDirectAsync<DirectInstallResult>(
+            taskName,
+            [version, installRoot, .. modules],
+            (cancellationToken, progress) => _direct.InstallEditorAsync(
+                new DirectInstallRequest(
+                    version,
+                    installRoot,
+                    modules,
+                    dryRun,
+                    acceptEula,
+                    PackageCacheDirectoryText.Text.Trim(),
+                    KeepPackageCacheCheck.IsChecked == true),
+                progress,
+                cancellationToken),
+            trackTask: !dryRun);
+        if (directResult is not null && !dryRun)
+        {
+            await RefreshEditorsAsync();
+        }
+        return directResult is not null;
     }
 
     private string ComposeInstallVersion()
@@ -2489,7 +2637,9 @@ public partial class MainWindow : Window
                         ResolveEditorRoot(editor.Path),
                         modules,
                         dryRun,
-                        acceptEula),
+                        acceptEula,
+                        PackageCacheDirectoryText.Text.Trim(),
+                        KeepPackageCacheCheck.IsChecked == true),
                     progress,
                     cancellationToken),
                 trackTask: !dryRun);
@@ -2821,7 +2971,9 @@ public partial class MainWindow : Window
                         EditorInstallRootText.Text.Trim(),
                         [],
                         DryRun: false,
-                        AcceptEula: false),
+                        AcceptEula: false,
+                        PackageCacheDirectory: PackageCacheDirectoryText.Text.Trim(),
+                        KeepPackageCache: KeepPackageCacheCheck.IsChecked == true),
                     progress,
                     cancellationToken));
             if (directResult is null)
@@ -2829,6 +2981,23 @@ public partial class MainWindow : Window
                 return false;
             }
             await RefreshEditorsAsync();
+            return InstalledEditors.Any(candidate =>
+                string.Equals(candidate.Version, project.EditorVersion, StringComparison.OrdinalIgnoreCase) &&
+                ResolveEditorExecutable(candidate.Path) is not null);
+        }
+
+        var cliChoiceResult = await TryHandleCliEditorInstallChoiceAsync(
+            project.EditorVersion,
+            [],
+            dryRun: false,
+            acceptEula: false);
+        if (cliChoiceResult.HasValue)
+        {
+            if (!cliChoiceResult.Value)
+            {
+                return false;
+            }
+
             return InstalledEditors.Any(candidate =>
                 string.Equals(candidate.Version, project.EditorVersion, StringComparison.OrdinalIgnoreCase) &&
                 ResolveEditorExecutable(candidate.Path) is not null);
@@ -3825,7 +3994,9 @@ public partial class MainWindow : Window
                 CliInstallDirectory = CliScriptInstallPathText.Text.Trim(),
                 Language = LocalizationService.CurrentLanguage,
                 ManagementMode = _managementMode.ToString(),
-                EditorInstallRoot = EditorInstallRootText.Text.Trim()
+                EditorInstallRoot = EditorInstallRootText.Text.Trim(),
+                PackageCacheDirectory = PackageCacheDirectoryText.Text.Trim(),
+                KeepPackageCache = KeepPackageCacheCheck.IsChecked == true
             }, new JsonSerializerOptions
             {
                 WriteIndented = true
@@ -4374,6 +4545,8 @@ public sealed class ManagerSettings
     public string Language { get; init; } = LocalizationService.Chinese;
     public string ManagementMode { get; init; } = nameof(Services.ManagementMode.Auto);
     public string EditorInstallRoot { get; init; } = string.Empty;
+    public string PackageCacheDirectory { get; init; } = string.Empty;
+    public bool KeepPackageCache { get; init; } = true;
 }
 
 public sealed class EditorInstallation

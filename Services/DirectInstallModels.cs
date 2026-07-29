@@ -37,14 +37,18 @@ public sealed record DirectInstallRequest(
     string InstallRoot,
     IReadOnlyList<string> ModuleIds,
     bool DryRun,
-    bool AcceptEula);
+    bool AcceptEula,
+    string PackageCacheDirectory = "",
+    bool KeepPackageCache = true);
 
 public sealed record DirectModuleInstallRequest(
     string Version,
     string EditorPath,
     IReadOnlyList<string> ModuleIds,
     bool DryRun,
-    bool AcceptEula);
+    bool AcceptEula,
+    string PackageCacheDirectory = "",
+    bool KeepPackageCache = true);
 
 public sealed record DirectInstallResult(
     string Version,

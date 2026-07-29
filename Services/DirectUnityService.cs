@@ -11,7 +11,6 @@ public sealed class DirectUnityService
 {
     private static readonly HttpClient SharedHttpClient = CreateHttpClient();
     private readonly UnityReleaseCatalogClient _catalog = new(SharedHttpClient);
-    private readonly PackageDownloadService _downloads = new(SharedHttpClient, DirectInstallPaths.Packages, 3);
     private readonly SafePackageExtractor _extractor = new();
     private readonly DirectInstallStateStore _state = new(DirectInstallPaths.State);
 
@@ -77,7 +76,9 @@ public sealed class DirectUnityService
             request.EditorPath,
             request.ModuleIds,
             request.DryRun,
-            request.AcceptEula);
+            request.AcceptEula,
+            request.PackageCacheDirectory,
+            request.KeepPackageCache);
         return await InstallAsync(installRequest, progress, cancellationToken, installEditor: false);
     }
 
@@ -162,10 +163,14 @@ public sealed class DirectUnityService
                 return new DirectInstallResult(release.Version, editorPath, selectedModules.Select(module => module.Id).ToArray(), true);
             }
 
+            var downloads = new PackageDownloadService(
+                SharedHttpClient,
+                ResolvePackageCacheDirectory(request.PackageCacheDirectory),
+                3);
             await SaveTransactionAsync(transactionId, release.Version, editorPath, DirectInstallPhase.Downloading, "Downloading packages", cancellationToken);
             var receivedByPackage = new ConcurrentDictionary<string, long>(StringComparer.OrdinalIgnoreCase);
             var expectedTotal = packagePlans.Sum(package => Math.Max(0, package.DownloadSize));
-            var downloadTasks = packagePlans.Select(package => _downloads.DownloadAsync(
+            var downloadTasks = packagePlans.Select(package => downloads.DownloadAsync(
                 package,
                 item =>
                 {
@@ -227,6 +232,10 @@ public sealed class DirectUnityService
 
             await SaveTransactionAsync(transactionId, release.Version, editorPath, DirectInstallPhase.Completed, "Installation completed", cancellationToken);
             progress?.Report(new DirectOperationProgress(DirectInstallPhase.Completed, $"Unity {release.Version} installation completed", 100, true));
+            if (!request.KeepPackageCache)
+            {
+                DeleteDownloadedCacheFiles(downloaded);
+            }
             return new DirectInstallResult(release.Version, editorPath, installedModuleIds.ToArray(), false);
         }
         catch (OperationCanceledException)
@@ -336,6 +345,39 @@ public sealed class DirectUnityService
             throw new InvalidOperationException($"Unity {version} is already installed at {editorPath}.");
         }
         return editorPath;
+    }
+
+    private static string ResolvePackageCacheDirectory(string packageCacheDirectory)
+    {
+        var input = string.IsNullOrWhiteSpace(packageCacheDirectory)
+            ? DirectInstallPaths.Packages
+            : Environment.ExpandEnvironmentVariables(packageCacheDirectory);
+        var cacheDirectory = Path.GetFullPath(input);
+        if (File.Exists(cacheDirectory))
+        {
+            throw new InvalidDataException("Package cache path points to a file.");
+        }
+        Directory.CreateDirectory(cacheDirectory);
+        return cacheDirectory;
+    }
+
+    private static void DeleteDownloadedCacheFiles(IEnumerable<DownloadedPackage> downloadedPackages)
+    {
+        foreach (var path in downloadedPackages
+                     .SelectMany(package => new[] { package.FilePath, package.FilePath + ".metadata.json" })
+                     .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            try
+            {
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+            }
+        }
     }
 
     private static string ValidateExistingEditorPath(string editorPath, string version)

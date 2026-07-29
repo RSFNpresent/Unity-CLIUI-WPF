@@ -59,6 +59,7 @@ public sealed class UnityModulePackage
 
 public sealed class UnityPackageSize
 {
+    [JsonConverter(typeof(FlexibleInt64JsonConverter))]
     public long Value { get; init; }
     public string Unit { get; init; } = "BYTE";
 }

@@ -16,6 +16,7 @@ internal static class Program
     private static readonly List<(string Name, Func<Task> Test)> Tests =
     [
         ("Release API parsing", TestReleaseApiParsingAsync),
+        ("Release API flexible size values", UnityReleaseModelTests.RunAsync),
         ("Management mode and module fallback policies", ManagementModePolicyTests.RunAsync),
         ("System animation policy", SystemAnimationPolicyTests.RunAsync),
         ("First-run language and management choices", TestFirstRunChoicesAsync),
