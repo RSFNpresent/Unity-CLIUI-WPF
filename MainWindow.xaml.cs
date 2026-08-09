@@ -2857,7 +2857,7 @@ public partial class MainWindow : Window
         }
 
         var editor = InstalledEditors.FirstOrDefault(candidate =>
-            string.Equals(candidate.Version, project.EditorVersion, StringComparison.OrdinalIgnoreCase) &&
+            UnityVersionPolicy.Matches(candidate.Version, project.EditorVersion) &&
             ResolveEditorExecutable(candidate.Path) is not null);
         if (editor is null)
         {
@@ -2888,7 +2888,7 @@ public partial class MainWindow : Window
                 }
 
                 editor = InstalledEditors.FirstOrDefault(candidate =>
-                    string.Equals(candidate.Version, project.EditorVersion, StringComparison.OrdinalIgnoreCase) &&
+                    UnityVersionPolicy.Matches(candidate.Version, project.EditorVersion) &&
                     ResolveEditorExecutable(candidate.Path) is not null);
             }
         }
@@ -2982,7 +2982,7 @@ public partial class MainWindow : Window
             }
             await RefreshEditorsAsync();
             return InstalledEditors.Any(candidate =>
-                string.Equals(candidate.Version, project.EditorVersion, StringComparison.OrdinalIgnoreCase) &&
+                UnityVersionPolicy.Matches(candidate.Version, project.EditorVersion) &&
                 ResolveEditorExecutable(candidate.Path) is not null);
         }
 
@@ -2999,7 +2999,7 @@ public partial class MainWindow : Window
             }
 
             return InstalledEditors.Any(candidate =>
-                string.Equals(candidate.Version, project.EditorVersion, StringComparison.OrdinalIgnoreCase) &&
+                UnityVersionPolicy.Matches(candidate.Version, project.EditorVersion) &&
                 ResolveEditorExecutable(candidate.Path) is not null);
         }
 
@@ -3014,7 +3014,7 @@ public partial class MainWindow : Window
 
         await RefreshEditorsAsync();
         var installed = InstalledEditors.Any(candidate =>
-            string.Equals(candidate.Version, project.EditorVersion, StringComparison.OrdinalIgnoreCase) &&
+            UnityVersionPolicy.Matches(candidate.Version, project.EditorVersion) &&
             ResolveEditorExecutable(candidate.Path) is not null);
         if (!installed)
         {

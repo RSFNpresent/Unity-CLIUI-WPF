@@ -1,10 +1,9 @@
 using System.Diagnostics;
 using System.IO;
-using System.Text.RegularExpressions;
 
 namespace unity_cli_ui.Services;
 
-public static partial class InstalledEditorScanner
+public static class InstalledEditorScanner
 {
     public static IReadOnlyList<InstalledEditorInfo> Scan(string editorInstallRoot, CancellationToken cancellationToken)
     {
@@ -105,8 +104,9 @@ public static partial class InstalledEditorScanner
         }
         var versionInfo = FileVersionInfo.GetVersionInfo(unity);
         var productVersion = versionInfo.ProductVersion ?? versionInfo.FileVersion ?? string.Empty;
-        var match = UnityVersionPattern().Match(productVersion);
-        var version = match.Success ? match.Value : Path.GetFileName(Path.TrimEndingDirectorySeparator(root));
+        var version = UnityVersionPolicy.TryExtract(productVersion, out var detectedVersion)
+            ? detectedVersion
+            : UnityVersionPolicy.Normalize(Path.GetFileName(Path.TrimEndingDirectorySeparator(root)));
         return new InstalledEditorInfo(version, root, "x86_64", DetectInstalledModules(root));
     }
 
@@ -117,7 +117,4 @@ public static partial class InstalledEditorScanner
             modules.Add(id);
         }
     }
-
-    [GeneratedRegex(@"\d+\.\d+\.\d+[abfp]\d+", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
-    private static partial Regex UnityVersionPattern();
 }

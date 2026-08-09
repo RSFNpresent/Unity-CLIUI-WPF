@@ -56,9 +56,10 @@ dotnet build unity-cli-ui.csproj -c Release
 dotnet run --project Tests\UnityCliUi.DirectTests\UnityCliUi.DirectTests.csproj -c Release
 dotnet publish unity-cli-ui.csproj -p:PublishProfile=win-x64-framework-dependent
 dotnet publish unity-cli-ui.csproj -p:PublishProfile=win-x64-self-contained
+.\scripts\Publish-Packages.ps1
 ```
 
-业务服务至少运行回归测试；UI 变更还要启动应用检查布局、下拉框、语言切换和交互；发布前执行两种构建的启动验证并检查 ZIP 内容。
+业务服务至少运行回归测试；UI 变更还要启动应用检查布局、下拉框、语言切换和交互。正式打包只运行 `Publish-Packages.ps1`，并始终生成普通版和自包含版。
 
 ## Knowledge 索引
 

@@ -22,6 +22,7 @@
 - 本地编辑器发现：`InstalledEditorScanner`。
 - 模块显示策略与本地目录：`EditorModuleDisplayPolicy`、`InstalledModuleCatalog`。
 - 工程创建：`UnityProjectCreator`。
+- Unity 版本解析与比较：`UnityVersionPolicy`。
 - 本地化：`LocalizationService`。
 
 ## 本地状态

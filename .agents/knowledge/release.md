@@ -15,8 +15,11 @@
 
 - `win-x64-framework-dependent`：依赖 .NET 10 Desktop Runtime。
 - `win-x64-self-contained`：包含运行时，启用原生库单文件打包和压缩。
+- `global.json` 只允许稳定 .NET SDK，避免普通版使用预览 apphost 的失效 Runtime 跳转。
 - 项目级 `PublishSingleFile=true`。
 - `ValidatePublishedLayout` 会拒绝除 `Unity-CLIUI.exe` 外的任何发布文件。
+
+正式打包必须运行 `scripts\Publish-Packages.ps1`。脚本不可只生成一种包，必须顺序生成普通版和自包含版。
 
 两种发布目录位于 `bin\Release\net10.0-windows\publish\<profile>\`，正式 ZIP 放在 `artifacts\v<version>\`。
 
@@ -29,7 +32,7 @@
 5. 检查 ZIP 也只有该 EXE，不含 Unity CLI 和 `System.Security.Cryptography.Xml.dll`。
 6. 读取两个 EXE 的 Company、Product、FileVersion、ProductVersion。
 7. 不终止用户已有进程，分别启动并确认进入输入空闲、正常响应，再关闭本次测试进程。
-8. 计算并记录两个 ZIP 的 SHA-256。
+8. 只有明确文件错误时才计算文件 hash。
 
 ## GitHub 发布
 

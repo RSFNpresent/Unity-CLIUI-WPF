@@ -10,10 +10,15 @@ The interface follows the Windows 10 Settings style and is available in English 
 
 Download the Windows x64 package from [Releases](https://github.com/RSFNpresent/Unity-CLIUI-WPF/releases), extract it, and run `Unity-CLIUI.exe`.
 
+- `framework-dependent` is the smaller package. It requires the [.NET 10 Desktop Runtime x64](https://aka.ms/dotnet-core-applaunch?missing_runtime=true&arch=x64&rid=win-x64&os=win10&apphost_version=10.0.10&gui=true).
+- `self-contained` includes the runtime and needs no separate .NET installation.
+
 Unity CLI is not included. Select **Direct (no CLI)** in **Settings** to enable official package downloads and installation without the CLI. **Auto** only detects an existing CLI and never switches to direct downloads implicitly.
 
-## Version 1.0.3
+## Version 1.0.4
 
+- Match full Unity versions, including regional suffixes such as `f1c1`, when opening projects.
+- Build the runtime-dependent launcher with a stable .NET 10 SDK and a working Desktop Runtime redirect.
 - Install, scan, update, uninstall, and launch Unity editors with or without Unity CLI.
 - Discover editor packages and modules from Unity's official Release API.
 - Resume up to three package downloads in parallel, verify official integrity metadata, and stage ZIP extraction before committing files.
@@ -39,14 +44,13 @@ dotnet build unity-cli-ui.csproj
 
 ## Publish
 
-Use the checked-in publish profiles to create the Windows x64 packages:
+One command always creates both Windows x64 packages:
 
 ```powershell
-dotnet publish unity-cli-ui.csproj -p:PublishProfile=win-x64-self-contained
-dotnet publish unity-cli-ui.csproj -p:PublishProfile=win-x64-framework-dependent
+.\scripts\Publish-Packages.ps1
 ```
 
-Each profile produces only `Unity-CLIUI.exe`. Publishing fails if any additional file is present. The Unity CLI executable is ignored by Git and is never included.
+The script publishes `framework-dependent` and `self-contained` together. Each ZIP contains only `Unity-CLIUI.exe`.
 
 Run the direct-backend regression suite without external test packages:
 

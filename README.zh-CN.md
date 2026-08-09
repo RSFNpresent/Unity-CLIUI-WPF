@@ -10,10 +10,15 @@ Unity CLIUI 是一个用于 Windows 的第三方 WPF Unity 管理器。无需安
 
 从 [Releases](https://github.com/RSFNpresent/Unity-CLIUI-WPF/releases) 下载 Windows x64 压缩包，解压后运行 `Unity-CLIUI.exe`。
 
+- `framework-dependent` 是普通版，体积较小。它需要 [.NET 10 Desktop Runtime x64](https://aka.ms/dotnet-core-applaunch?missing_runtime=true&arch=x64&rid=win-x64&os=win10&apphost_version=10.0.10&gui=true)。
+- `self-contained` 是自包含版，无需单独安装 .NET Runtime。
+
 发布包不包含 Unity CLI。在“设置”中明确选择“直连（无 CLI）”后，才会启用官方软件包的下载与安装。“自动”模式只检测已有 CLI，不会隐式切换到直连下载。
 
-## 1.0.3 版本
+## 1.0.4 版本
 
+- 打开工程时匹配完整 Unity 版本，包括 `f1c1` 等区域发行后缀。
+- 使用稳定版 .NET 10 SDK 构建普通版，并跳转到正确的 Desktop Runtime 下载页。
 - 在有无 Unity CLI 的环境中安装、扫描、更新、卸载和启动 Unity 编辑器。
 - 从 Unity 官方 Release API 获取编辑器与模块清单。
 - 最多并行断点下载三个包，校验官方完整性信息，并在独立 staging 中安全解压后提交。
@@ -39,14 +44,13 @@ dotnet build unity-cli-ui.csproj
 
 ## 发布
 
-使用仓库内固定的 Publish Profile 生成 Windows x64 发布包：
+一个命令固定生成两种 Windows x64 发布包：
 
 ```powershell
-dotnet publish unity-cli-ui.csproj -p:PublishProfile=win-x64-self-contained
-dotnet publish unity-cli-ui.csproj -p:PublishProfile=win-x64-framework-dependent
+.\scripts\Publish-Packages.ps1
 ```
 
-每个 Profile 都只生成 `Unity-CLIUI.exe`。如果发布目录出现任何其他文件，发布会直接失败。Unity CLI 可执行文件已被 Git 忽略，且不会被包含。
+脚本同时生成普通版和自包含版。每个 ZIP 只包含 `Unity-CLIUI.exe`。
 
 无需外部测试包即可运行直连后端回归测试：
 

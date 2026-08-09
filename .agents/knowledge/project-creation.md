@@ -11,6 +11,7 @@
 - 从 `Unity.exe` ProductVersion 读取精确 Unity 版本和 revision。
 - 所选列表版本与可执行文件版本不一致时必须失败。
 - 支持正式、alpha/beta 和中国发行后缀，例如 `2022.3.62f3`、`6000.5.2f1`、`...f1c1`。
+- 工程启动使用 `UnityVersionPolicy` 比较完整版本。不得截断 `f1c1` 等发行后缀。
 
 ## 包版本来源
 

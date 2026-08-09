@@ -6,6 +6,7 @@
 - 禁止让 Direct 版本详情从全量可用模块缓存恢复数据；应只显示本机已安装模块。
 - 远程目录失败时禁止用旧全量缓存伪装成功；改为本地扫描与已登记模块，并显示离线回退状态。
 - Unity Release API 的 `installedSize.value` 和 `downloadSize.value` 不保证始终是 JSON Int64；模型解析必须接受字符串数字和 `.0` 数字。
+- Unity 版本正则不得停在 `f1`。必须保留 `f1c1` 等后缀，否则工程版本与列表版本无法匹配。
 - 禁止把 Unity CLI 放入安装包；本地 `unitycli-*.exe` 仅供开发检测，已由项目文件和 `.gitignore` 排除。
 - 禁止接收或打包 `System.Security.Cryptography.Xml.dll`。下载计划、清单字段和 ZIP 条目都要检查。
 - 禁止硬编码不同 Unity 编辑器的 Visual Studio 包版本；必须读取目标编辑器官方 Package Manager 清单。
@@ -43,6 +44,8 @@
 - 如果 `dotnet build` 卡在还原阶段，先单独执行 `dotnet restore`。还原成功后用 `dotnet build --no-restore` 验证编译，避免重复卡在 NuGet 网络重试。
 - self-contained 不等于必须散布数百个文件；当前配置启用单文件和压缩，发布目标会拒绝额外文件。
 - 发布前检查两个 ZIP 都只有 `Unity-CLIUI.exe`，并再次排除 Unity CLI 与测试 DLL。
+- 禁止单独打一个发布包。正式打包统一运行 `scripts\Publish-Packages.ps1`，同时生成普通版和自包含版。
+- 禁止使用预览 .NET SDK 打包普通版。旧 apphost 可能跳转到错误的 Runtime 下载页。
 - 已存在的 GitHub 标签不得改写。发布前先检查 Releases 和 tags，再递增版本号。
 - PowerShell 拼接上传 URL 时，`$uploadBase?name=...` 会误解析；使用 `${uploadBase}?name=...`。
 - 大型资产用 `Invoke-RestMethod -InFile` 可能连接中断；失败后先查询远端状态，再用 Git 自带 curl 重试。

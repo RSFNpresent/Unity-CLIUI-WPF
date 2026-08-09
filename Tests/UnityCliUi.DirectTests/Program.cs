@@ -19,6 +19,7 @@ internal static class Program
         ("Release API flexible size values", UnityReleaseModelTests.RunAsync),
         ("Management mode and module fallback policies", ManagementModePolicyTests.RunAsync),
         ("System animation policy", SystemAnimationPolicyTests.RunAsync),
+        ("Unity version normalization and matching", UnityVersionPolicyTests.RunAsync),
         ("First-run language and management choices", TestFirstRunChoicesAsync),
         ("Minimal Unity project creation", TestMinimalUnityProjectCreationAsync),
         ("Project creation path safety", TestProjectCreationPathSafetyAsync),
