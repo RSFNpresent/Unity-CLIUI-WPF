@@ -46,6 +46,8 @@
 - 发布前检查两个 ZIP 都只有 `Unity-CLIUI.exe`，并再次排除 Unity CLI 与测试 DLL。
 - 禁止单独打一个发布包。正式打包统一运行 `scripts\Publish-Packages.ps1`，同时生成普通版和自包含版。
 - 禁止使用预览 .NET SDK 打包普通版。旧 apphost 可能跳转到错误的 Runtime 下载页。
+- apphost 默认先读取 `DOTNET_ROOT_X64`，无效值会遮蔽已安装 Runtime。普通版必须只搜索 Windows 全局位置。
+- 不要显式设置 `RuntimeFrameworkVersion`。该属性会把 apphost 包固定到旧补丁，运行时声明默认已是 `10.0.0`。
 - 已存在的 GitHub 标签不得改写。发布前先检查 Releases 和 tags，再递增版本号。
 - PowerShell 拼接上传 URL 时，`$uploadBase?name=...` 会误解析；使用 `${uploadBase}?name=...`。
 - 大型资产用 `Invoke-RestMethod -InFile` 可能连接中断；失败后先查询远端状态，再用 Git 自带 curl 重试。

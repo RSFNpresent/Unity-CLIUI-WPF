@@ -1,5 +1,13 @@
 # 最近工作日志
 
+## 2026-08-14
+
+- 普通版 apphost 改为只搜索 Windows 全局 x64 Runtime，避免无效 `DOTNET_ROOT_X64` 遮蔽已安装版本。
+- README 改用微软长期有效的 .NET 10 Desktop Runtime x64 安装器地址。
+- 发布 SDK 更新为稳定版 `10.0.303`。普通版 apphost 为 `10.0.11`，运行时声明保持 `Microsoft.WindowsDesktop.App 10.0.0`。
+- 产品版本更新为 `1.0.5`。Release 构建为 0 警告和 0 错误，回归测试 16/16 通过。
+- `v1.0.5` 两个 ZIP 均只包含 `Unity-CLIUI.exe`。普通版为 366419 字节，自包含版为 59431085 字节。
+
 ## 2026-08-09
 
 - 新增 `UnityVersionPolicy`，统一解析和比较 Unity 版本，并保留 `f1c1` 等区域发行后缀。

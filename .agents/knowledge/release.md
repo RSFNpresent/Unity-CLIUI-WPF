@@ -13,9 +13,11 @@
 
 ## 发布配置
 
-- `win-x64-framework-dependent`：依赖 .NET 10 Desktop Runtime。
+- `win-x64-framework-dependent`：依赖 .NET 10 Desktop Runtime，声明 `10.0.0` 并允许最新补丁。
+- 普通版 apphost 只搜索 Windows 全局 x64 安装位置，避免错误的 `DOTNET_ROOT_X64` 覆盖已安装 Runtime。
+- README 使用 `https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x64.exe`，该地址始终下载当前 x64 Desktop Runtime。
 - `win-x64-self-contained`：包含运行时，启用原生库单文件打包和压缩。
-- `global.json` 只允许稳定 .NET SDK，避免普通版使用预览 apphost 的失效 Runtime 跳转。
+- `global.json` 只允许稳定 .NET SDK。当前发布基线为 `10.0.303`，apphost 为 `10.0.11`。
 - 项目级 `PublishSingleFile=true`。
 - `ValidatePublishedLayout` 会拒绝除 `Unity-CLIUI.exe` 外的任何发布文件。
 
@@ -33,10 +35,11 @@
 6. 读取两个 EXE 的 Company、Product、FileVersion、ProductVersion。
 7. 不终止用户已有进程，分别启动并确认进入输入空闲、正常响应，再关闭本次测试进程。
 8. 只有明确文件错误时才计算文件 hash。
+9. 普通版设置无效 `DOTNET_ROOT_X64` 后仍应从 Windows 全局位置启动。
 
 ## GitHub 发布
 
 - 先提交并推送 `main`，再创建指向该提交的 annotated tag 并推送。
 - Release 标题使用 `Unity CLIUI v<version>`，说明简短列出主要变化及两种运行时要求。
-- 上传后通过 GitHub API 回查：非 draft/prerelease、tag 正确、两个资产为 `uploaded`、远端大小和 digest 与本地一致。
+- 上传后通过 GitHub API 回查：非 draft/prerelease、tag 正确、两个资产为 `uploaded`、远端大小与本地一致。
 - 用户明确要求“只推送不发布”时不得创建 Release；只有收到发布授权后才执行。

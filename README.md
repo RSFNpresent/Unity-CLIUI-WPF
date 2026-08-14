@@ -10,13 +10,14 @@ The interface follows the Windows 10 Settings style and is available in English 
 
 Download the Windows x64 package from [Releases](https://github.com/RSFNpresent/Unity-CLIUI-WPF/releases), extract it, and run `Unity-CLIUI.exe`.
 
-- `framework-dependent` is the smaller package. It requires the [.NET 10 Desktop Runtime x64](https://aka.ms/dotnet-core-applaunch?missing_runtime=true&arch=x64&rid=win-x64&os=win10&apphost_version=10.0.10&gui=true).
+- `framework-dependent` is the smaller package. It requires the [.NET 10 Desktop Runtime x64](https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x64.exe).
 - `self-contained` includes the runtime and needs no separate .NET installation.
 
 Unity CLI is not included. Select **Direct (no CLI)** in **Settings** to enable official package downloads and installation without the CLI. **Auto** only detects an existing CLI and never switches to direct downloads implicitly.
 
-## Version 1.0.4
+## Version 1.0.5
 
+- Resolve the installed x64 Desktop Runtime from the Windows global installation and use the official x64 installer link.
 - Match full Unity versions, including regional suffixes such as `f1c1`, when opening projects.
 - Build the runtime-dependent launcher with a stable .NET 10 SDK and a working Desktop Runtime redirect.
 - Install, scan, update, uninstall, and launch Unity editors with or without Unity CLI.
