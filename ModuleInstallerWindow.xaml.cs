@@ -22,6 +22,7 @@ public partial class ModuleInstallerWindow : Window
         InitializeComponent();
         SourceInitialized += (_, _) =>
         {
+            WindowMaximizeBounds.Attach(this);
             if (!AcrylicWindow.Enable(this))
             {
                 var fallback = new SolidColorBrush(Color.FromRgb(243, 243, 243));

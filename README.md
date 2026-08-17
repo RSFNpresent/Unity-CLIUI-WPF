@@ -15,8 +15,10 @@ Download the Windows x64 package from [Releases](https://github.com/RSFNpresent/
 
 Unity CLI is not included. Select **Direct (no CLI)** in **Settings** to enable official package downloads and installation without the CLI. **Auto** only detects an existing CLI and never switches to direct downloads implicitly.
 
-## Version 1.0.5
+## Version 1.0.6
 
+- Keep maximized windows inside the active monitor work area, including custom and auto-hidden taskbars.
+- Add Unity projects by dropping project folders onto the project list.
 - Resolve the installed x64 Desktop Runtime from the Windows global installation and use the official x64 installer link.
 - Match full Unity versions, including regional suffixes such as `f1c1`, when opening projects.
 - Build the runtime-dependent launcher with a stable .NET 10 SDK and a working Desktop Runtime redirect.

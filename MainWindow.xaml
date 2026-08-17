@@ -1564,7 +1564,11 @@
                         </TabControl>
                     </Grid>
 
-                    <Grid x:Name="ProjectsPage" Visibility="Collapsed">
+                    <Grid x:Name="ProjectsPage"
+                          Visibility="Collapsed"
+                          AllowDrop="True"
+                          DragEnter="ProjectsPage_DragEnter"
+                          Drop="ProjectsPage_Drop">
                         <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="18" /><RowDefinition Height="*" /></Grid.RowDefinitions>
                         <Grid>
                             <Grid.ColumnDefinitions>

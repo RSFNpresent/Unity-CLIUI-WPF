@@ -10,13 +10,15 @@ Unity CLIUI 是一个用于 Windows 的第三方 WPF Unity 管理器。无需安
 
 从 [Releases](https://github.com/RSFNpresent/Unity-CLIUI-WPF/releases) 下载 Windows x64 压缩包，解压后运行 `Unity-CLIUI.exe`。
 
-- `framework-dependent` 是普通版，体积较小。它需要 [.NET 10 Desktop Runtime x64](https://aka.ms/dotnet-core-applaunch?missing_runtime=true&arch=x64&rid=win-x64&os=win10&apphost_version=10.0.10&gui=true)。
+- `framework-dependent` 是普通版，体积较小。它需要 [.NET 10 Desktop Runtime x64](https://aka.ms/dotnet/10.0/windowsdesktop-runtime-win-x64.exe)。
 - `self-contained` 是自包含版，无需单独安装 .NET Runtime。
 
 发布包不包含 Unity CLI。在“设置”中明确选择“直连（无 CLI）”后，才会启用官方软件包的下载与安装。“自动”模式只检测已有 CLI，不会隐式切换到直连下载。
 
-## 1.0.4 版本
+## 1.0.6 版本
 
+- 最大化窗口使用当前显示器工作区，并兼容第三方任务栏与自动隐藏任务栏。
+- 将 Unity 工程文件夹拖放到工程列表即可添加工程。
 - 打开工程时匹配完整 Unity 版本，包括 `f1c1` 等区域发行后缀。
 - 使用稳定版 .NET 10 SDK 构建普通版，并跳转到正确的 Desktop Runtime 下载页。
 - 在有无 Unity CLI 的环境中安装、扫描、更新、卸载和启动 Unity 编辑器。

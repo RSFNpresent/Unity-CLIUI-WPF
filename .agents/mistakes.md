@@ -52,3 +52,5 @@
 - PowerShell 拼接上传 URL 时，`$uploadBase?name=...` 会误解析；使用 `${uploadBase}?name=...`。
 - 大型资产用 `Invoke-RestMethod -InFile` 可能连接中断；失败后先查询远端状态，再用 Git 自带 curl 重试。
 - 不得仅以构建成功代替启动验证；两种 EXE 都要实际启动、进入输入空闲并正常响应。
+- 无边框窗口最大化不得使用主显示器 `SystemParameters.WorkArea`。必须在 `WM_GETMINMAXINFO` 中读取窗口所在显示器的物理工作区。
+- 自动隐藏任务栏的工作区可能等于显示器边界。必须按任务栏边缘保留唤出区域，不能直接占满显示器。

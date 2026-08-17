@@ -108,6 +108,7 @@ public partial class MainWindow : Window
         };
         SourceInitialized += (_, _) =>
         {
+            WindowMaximizeBounds.Attach(this);
             _acrylicAvailable = AcrylicWindow.Enable(this);
             _windowTransitions.SetKnownAcrylicState(_acrylicAvailable);
             if (!_acrylicAvailable)
@@ -2792,14 +2793,37 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (!IsUnityProject(dialog.FolderName))
+        AddManagedProject(dialog.FolderName);
+    }
+
+    private void ProjectsPage_DragEnter(object sender, DragEventArgs e)
+    {
+        var projectPath = e.Data.GetData(DataFormats.FileDrop) is string[] paths
+            ? GetDroppedUnityProjectPath(paths)
+            : null;
+        e.Effects = projectPath is null ? DragDropEffects.None : DragDropEffects.Copy;
+        e.Handled = true;
+    }
+
+    private void ProjectsPage_Drop(object sender, DragEventArgs e)
+    {
+        var projectPath = e.Data.GetData(DataFormats.FileDrop) is string[] paths
+            ? GetDroppedUnityProjectPath(paths)
+            : null;
+        AddManagedProject(projectPath);
+        e.Handled = true;
+    }
+
+    private void AddManagedProject(string? projectPath)
+    {
+        if (projectPath is null || !IsUnityProject(projectPath))
         {
             ProjectScanStatusText.Text = LocalizationService.Get("project.invalidFolder");
             ProjectScanStatusText.Foreground = new SolidColorBrush(Color.FromRgb(196, 43, 28));
             return;
         }
 
-        var added = AddOrUpdateManagedProject(dialog.FolderName, markOpened: false);
+        var added = AddOrUpdateManagedProject(projectPath, markOpened: false);
         SortManagedProjects();
         SaveManagedProjects();
         UpdateProjectListStatus();
@@ -3806,6 +3830,9 @@ public partial class MainWindow : Window
 
     private static bool IsUnityProject(string path) =>
         Directory.Exists(path) && File.Exists(Path.Combine(path, "ProjectSettings", "ProjectVersion.txt"));
+
+    internal static string? GetDroppedUnityProjectPath(IEnumerable<string> paths) =>
+        paths.FirstOrDefault(IsUnityProject);
 
     private static string GetProjectName(string path) =>
         Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
