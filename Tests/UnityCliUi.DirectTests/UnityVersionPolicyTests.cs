@@ -16,9 +16,10 @@ internal static class UnityVersionPolicyTests
         try
         {
             Directory.CreateDirectory(editorDirectory);
-            File.Copy(Environment.ProcessPath!, Path.Combine(editorDirectory, "Unity.exe"));
-            var editor = InstalledEditorScanner.Scan(root, CancellationToken.None).Single();
-            Equal("6000.0.28f1c1", editor.Version);
+            var executablePath = Path.Combine(editorDirectory, "Unity.exe");
+            File.WriteAllText(executablePath, "not a Unity executable");
+            False(InstalledEditorScanner.TryReadVersion(executablePath, out _));
+            True(InstalledEditorScanner.Scan(root, CancellationToken.None).Count == 0);
         }
         finally
         {

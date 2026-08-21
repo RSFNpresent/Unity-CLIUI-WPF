@@ -7,6 +7,7 @@
 - 远程目录失败时禁止用旧全量缓存伪装成功；改为本地扫描与已登记模块，并显示离线回退状态。
 - Unity Release API 的 `installedSize.value` 和 `downloadSize.value` 不保证始终是 JSON Int64；模型解析必须接受字符串数字和 `.0` 数字。
 - Unity 版本正则不得停在 `f1`。必须保留 `f1c1` 等后缀，否则工程版本与列表版本无法匹配。
+- 手动扫描编辑器时不得把 `Unity.exe` 上级目录名作为版本。自定义目录名会产生无效版本并导致创建失败。
 - 禁止把 Unity CLI 放入安装包；本地 `unitycli-*.exe` 仅供开发检测，已由项目文件和 `.gitignore` 排除。
 - 禁止接收或打包 `System.Security.Cryptography.Xml.dll`。下载计划、清单字段和 ZIP 条目都要检查。
 - 禁止硬编码不同 Unity 编辑器的 Visual Studio 包版本；必须读取目标编辑器官方 Package Manager 清单。

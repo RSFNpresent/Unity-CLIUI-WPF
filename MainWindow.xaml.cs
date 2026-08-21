@@ -2369,16 +2369,8 @@ public partial class MainWindow : Window
     private static string NormalizePath(string path) =>
         Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
-    private static string? TryGetVersionFromEditorPath(string executablePath)
-    {
-        var editorDirectory = Directory.GetParent(executablePath);
-        if (editorDirectory is null || !string.Equals(editorDirectory.Name, "Editor", StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        return editorDirectory.Parent?.Name;
-    }
+    private static string? TryGetVersionFromEditorPath(string executablePath) =>
+        InstalledEditorScanner.TryReadVersion(executablePath, out var version) ? version : null;
 
     private static IReadOnlyList<string> FindEditorExecutables(string rootPath, CancellationToken cancellationToken)
     {

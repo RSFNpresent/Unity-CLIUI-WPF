@@ -37,6 +37,13 @@ public static class InstalledEditorScanner
             .ToArray();
     }
 
+    public static bool TryReadVersion(string executablePath, out string version)
+    {
+        var versionInfo = FileVersionInfo.GetVersionInfo(executablePath);
+        var productVersion = versionInfo.ProductVersion ?? versionInfo.FileVersion;
+        return UnityVersionPolicy.TryExtract(productVersion, out version);
+    }
+
     public static IReadOnlyList<string> DetectInstalledModules(string editorPath)
     {
         var root = Directory.Exists(editorPath)
@@ -102,11 +109,10 @@ public static class InstalledEditorScanner
         {
             return null;
         }
-        var versionInfo = FileVersionInfo.GetVersionInfo(unity);
-        var productVersion = versionInfo.ProductVersion ?? versionInfo.FileVersion ?? string.Empty;
-        var version = UnityVersionPolicy.TryExtract(productVersion, out var detectedVersion)
-            ? detectedVersion
-            : UnityVersionPolicy.Normalize(Path.GetFileName(Path.TrimEndingDirectorySeparator(root)));
+        if (!TryReadVersion(unity, out var version))
+        {
+            return null;
+        }
         return new InstalledEditorInfo(version, root, "x86_64", DetectInstalledModules(root));
     }
 

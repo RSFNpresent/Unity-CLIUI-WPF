@@ -148,7 +148,7 @@ public partial class CreateProjectWindow : Window
                 editor.Path));
             DialogResult = true;
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or ArgumentException)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or ArgumentException or InvalidDataException)
         {
             SetError(exception.Message);
         }
